@@ -37,9 +37,7 @@ func Unpack(s string) (string, error) {
 			switch {
 			case unicode.IsDigit(k):
 				n := int(k - '0')
-				for i := 0; i < n; i++ {
-					sb.WriteRune(prev)
-				}
+				sb.WriteString(strings.Repeat(string(prev), n))
 				prev = utf8.RuneError
 				state = INIT
 			case k == '\\':
@@ -55,7 +53,7 @@ func Unpack(s string) (string, error) {
 				prev = k
 				state = SYMBOL
 			default:
-				return "", nil // only \\ or \0-9 are allowed
+				return "", ErrInvalidString // only \\ or \0-9 are allowed
 			}
 		}
 		// fmt.Printf("%d %d = %c = %s\n", state, prev, k, sb.String())
