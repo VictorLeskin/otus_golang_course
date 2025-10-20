@@ -1,10 +1,23 @@
 package hw03frequencyanalysis
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestDebugCase(_ *testing.T) {
+	var text = `Как видите, он  спускается  по  Лестнице  вслед  за  своим    Кристофером   Робином,
+		                                                         за  своим    Кристофером   Робином,
+		                                                         за  своим `
+	TopSize = 3
+	result := Top10(text)
+	for _, r := range result {
+		fmt.Println(r)
+	}
+	TopSize = 10
+}
 
 // Change to true if needed.
 var taskWithAsteriskIsCompleted = false
