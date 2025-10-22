@@ -56,12 +56,13 @@ func Test_Trasform(t *testing.T) {
 	}
 }
 
+var text1 = `Как видите, он  спускается  по  Лестнице  вслед  за  своим Кристофером   Робином,
+                                                              за  своим    Кристофером   Робином,
+                                                              за  своим `
+
 func TestDebugCase(_ *testing.T) {
-	var text = `Как видите, он  спускается  по  Лестнице  вслед  за  своим    Кристофером   Робином,
-		                                                         за  своим    Кристофером   Робином,
-		                                                         за  своим `
 	TopSize = 3
-	result := Top10(text)
+	result := Top10(text1)
 	for _, r := range result {
 		fmt.Println(r)
 	}
