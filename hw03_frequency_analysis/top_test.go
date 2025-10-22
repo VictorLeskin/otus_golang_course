@@ -7,6 +7,55 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_IsLine(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{input: "-----", expected: true},
+		{input: "---------------", expected: true},
+		{input: "---a---", expected: false},
+		{input: "-", expected: true},
+		{input: " - ", expected: false},
+		{input: "---- ----", expected: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			result := IsLine(tc.input)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func Test_Trasform(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{input: " Кристофером ", expected: "кристофером"},
+		{input: "Нога", expected: "нога"},
+		{input: "нога", expected: "нога"},
+		{input: "нога!", expected: "нога"},
+		{input: "нога,", expected: "нога"},
+		{input: " 'нога' ", expected: "нога"},
+		{input: "какой-то", expected: "какой-то"},
+		{input: "какойто", expected: "какойто"},
+		{input: "dog,cat", expected: "dog,cat"},
+		{input: "dog...cat", expected: "dog...cat"},
+		{input: "dogcat", expected: "dogcat"},
+		{input: "-------", expected: "-------"},
+		{input: "-", expected: ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			result := Trasform(tc.input)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestDebugCase(_ *testing.T) {
 	var text = `Как видите, он  спускается  по  Лестнице  вслед  за  своим    Кристофером   Робином,
 		                                                         за  своим    Кристофером   Робином,
@@ -20,7 +69,7 @@ func TestDebugCase(_ *testing.T) {
 }
 
 // Change to true if needed.
-var taskWithAsteriskIsCompleted = false
+var taskWithAsteriskIsCompleted = true
 
 var text = `Как видите, он  спускается  по  лестнице  вслед  за  своим
 	другом   Кристофером   Робином,   головой   вниз,  пересчитывая
