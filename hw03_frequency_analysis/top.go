@@ -39,7 +39,6 @@ func Trasform(s string) string {
 }
 
 func Top10(text string) []string {
-
 	var ret []string
 	words0 := strings.Fields(text)
 
