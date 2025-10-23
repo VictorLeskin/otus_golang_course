@@ -55,7 +55,7 @@ func Top10(text string) []string {
 		wordCount[r]++
 	}
 
-	if len(wordCount) < TopSize {
+	if len(wordCount) == 0 {
 		return ret
 	}
 
@@ -71,7 +71,8 @@ func Top10(text string) []string {
 		return uniqueWordsStat[i].count > uniqueWordsStat[j].count
 	})
 
-	for i := 0; i < TopSize; i++ {
+	cnt := min(len(uniqueWordsStat), TopSize)
+	for i := 0; i < cnt; i++ {
 		ret = append(ret, uniqueWordsStat[i].word)
 	}
 	// fmt.Println(uniqueWordsStat)

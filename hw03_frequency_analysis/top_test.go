@@ -67,6 +67,15 @@ func TestDebugCase(_ *testing.T) {
 		fmt.Println(r)
 	}
 	TopSize = 10
+	expected := []string{
+		"empty",
+		"in",
+		"no",
+		"string",
+		"empty",
+	}
+	k := Top10("no words in empty string")
+	fmt.Printf("%v\n%v", k, expected)
 }
 
 // Change to true if needed.
@@ -109,6 +118,37 @@ var text = `Как видите, он  спускается  по  лестни�
 func TestTop10(t *testing.T) {
 	t.Run("no words in empty string", func(t *testing.T) {
 		require.Len(t, Top10(""), 0)
+	})
+
+	t.Run("no", func(t *testing.T) {
+		require.Equal(t, Top10("no"), []string{"no"})
+	})
+	t.Run("0 1 2 3 4 5 6 7 8 9", func(t *testing.T) {
+		require.Equal(t, Top10("0 1 2 3 4 5 6 7 8 9"), []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"})
+	})
+
+	t.Run("no words in empty string", func(t *testing.T) {
+		expected := []string{
+			"empty",
+			"in",
+			"no",
+			"string",
+			"words",
+		}
+		k := Top10("no words in empty string")
+		require.Equal(t, expected, k)
+	})
+
+	t.Run("no no no no no no no no no no no no no no no no words in empty string", func(t *testing.T) {
+		expected := []string{
+			"no",
+			"empty",
+			"in",
+			"string",
+			"words",
+		}
+		k := Top10("no no no no no no no no no no no no no no no no words in empty string")
+		require.Equal(t, expected, k)
 	})
 
 	t.Run("positive test", func(t *testing.T) {
