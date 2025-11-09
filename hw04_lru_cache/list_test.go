@@ -11,6 +11,31 @@ type t_list struct {
 	list
 }
 
+func checkInvariancts(t *testing.T, t0 t_list) {
+	if t0.len == 0 {
+		require.Nil(t, t0.front)
+		require.Nil(t, t0.back)
+	} else {
+		require.Nil(t, t0.front.Prev)
+		require.Nil(t, t0.back.Next)
+
+		current := t0.front
+		var previous *ListItem = nil
+
+		for current != nil {
+			// Проверяем, что current->prev ведет на предыдущий узел, который мы запомнили
+			require.Equal(t, current.Prev, previous)
+
+			// Двигаемся вперед
+			previous = current
+			current = current.Next
+		}
+
+		// Если мы дошли до конца, previous должен быть равен tail
+		require.Equal(t, previous, t0.back)
+	}
+}
+
 func Test_list_ctor(t *testing.T) {
 	var t0 t_list
 
@@ -62,9 +87,12 @@ func TestList_Back(t *testing.T) {
 func TestList_PushFront(t *testing.T) {
 	var t0 t_list
 
+	checkInvariancts(t, t0)
 	assert.Nil(t, t0.Front())
 
 	res := t0.PushFront(33)
+
+	checkInvariancts(t, t0)
 	assert.Nil(t, t0.front.Prev)
 	assert.Nil(t, t0.front.Next)
 	assert.Equal(t, 33, t0.front.Value)
@@ -72,6 +100,8 @@ func TestList_PushFront(t *testing.T) {
 	assert.Equal(t, 1, t0.len)
 
 	res = t0.PushFront(44)
+
+	checkInvariancts(t, t0)
 	assert.NotNil(t, t0.front.Next)
 	assert.Equal(t, 33, t0.front.Next.Value)
 	assert.Equal(t, 44, t0.front.Value)
@@ -82,9 +112,12 @@ func TestList_PushFront(t *testing.T) {
 func TestList_PushBack(t *testing.T) {
 	var t0 t_list
 
+	checkInvariancts(t, t0)
 	assert.Nil(t, t0.Back())
 
 	res := t0.PushBack(33)
+
+	checkInvariancts(t, t0)
 	assert.Nil(t, t0.back.Prev)
 	assert.Nil(t, t0.back.Next)
 	assert.Equal(t, 33, t0.back.Value)
@@ -92,6 +125,8 @@ func TestList_PushBack(t *testing.T) {
 	assert.Equal(t, 1, t0.len)
 
 	res = t0.PushBack(44)
+
+	checkInvariancts(t, t0)
 	assert.NotNil(t, t0.back.Prev)
 	assert.Equal(t, 33, t0.back.Prev.Value)
 	assert.Equal(t, 44, t0.back.Value)
@@ -106,11 +141,13 @@ func TestList_RemoveFront(t *testing.T) {
 	t0.PushBack(20) //
 	t0.PushBack(30) // [10, 20, 30]
 
+	checkInvariancts(t, t0)
 	assert.Equal(t, 10, t0.front.Value)
 	assert.Equal(t, 3, t0.len)
 
 	t0.RemoveFront()
 
+	checkInvariancts(t, t0)
 	assert.Equal(t, 20, t0.front.Value)
 	assert.Equal(t, 2, t0.len)
 }
@@ -126,8 +163,11 @@ func TestList_RemoveBack(t *testing.T) {
 	assert.Equal(t, 40, t0.back.Value)
 	assert.Equal(t, 4, t0.len)
 
+	checkInvariancts(t, t0)
+
 	t0.RemoveBack()
 
+	checkInvariancts(t, t0)
 	assert.Equal(t, 30, t0.back.Value)
 	assert.Equal(t, 3, t0.len)
 }
