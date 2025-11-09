@@ -12,15 +12,94 @@ type List interface {
 
 type ListItem struct {
 	Value interface{}
-	Next  *ListItem
 	Prev  *ListItem
+	Next  *ListItem
 }
 
 type list struct {
-	List // Remove me after realization.
-	// Place your code here.
+	List  // Remove me after realization.
+	front *ListItem
+	back  *ListItem
+	len   int
+}
+
+func (l list) Front() *ListItem {
+	return l.front
+}
+
+func (l list) Back() *ListItem {
+	return l.back
+}
+
+func (l list) Len() int {
+	return l.len
+}
+
+func NewListItem(v interface{}, prev *ListItem, next *ListItem) *ListItem {
+	return &ListItem{Value: v, Prev: prev, Next: next}
+}
+
+func (l *list) Init(v interface{}) *ListItem {
+	m := &ListItem{Value: v}
+	l.front = m
+	l.back = m
+	l.len = 1
+	return m
+}
+
+func (l *list) PushBack(v interface{}) *ListItem {
+	if nil == l.back {
+		return l.Init(v)
+	}
+
+	m := NewListItem(v, l.back, nil)
+
+	l.back.Next = m
+	l.back = m
+	l.len++
+	return m
+}
+
+func (l *list) PushFront(v interface{}) *ListItem {
+	if nil == l.front {
+		return l.Init(v)
+	}
+
+	m := NewListItem(v, nil, l.front)
+
+	l.front.Prev = m
+	l.front = m
+	l.len++
+	return m
+}
+
+func (l *list) RemoveFront() {
+	l.front = l.front.Next
+	l.len--
+}
+
+func (l *list) RemoveBack() {
+	l.back = l.back.Prev
+	l.len--
+}
+
+func (l *list) Remove(j *ListItem) {
+	switch {
+	case l.front == j:
+		l.RemoveFront()
+	case l.back == j:
+		l.RemoveBack()
+	default: // item has prev and next
+		j.Prev.Next = j.Next
+		j.Next.Prev = j.Prev
+		l.len--
+	}
 }
 
 func NewList() List {
-	return new(list)
+	return &list{
+		front: nil,
+		back:  nil,
+		len:   0,
+	}
 }
