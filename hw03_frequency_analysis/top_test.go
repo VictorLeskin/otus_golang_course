@@ -7,20 +7,79 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_IsLine(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{input: "-----", expected: true},
+		{input: "---------------", expected: true},
+		{input: "---a---", expected: false},
+		{input: "-", expected: true},
+		{input: " - ", expected: false},
+		{input: "---- ----", expected: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			result := IsLine(tc.input)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func Test_Trasform(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{input: " Кристофером ", expected: "кристофером"},
+		{input: "Нога", expected: "нога"},
+		{input: "нога", expected: "нога"},
+		{input: "нога!", expected: "нога"},
+		{input: "нога,", expected: "нога"},
+		{input: " 'нога' ", expected: "нога"},
+		{input: "какой-то", expected: "какой-то"},
+		{input: "какойто", expected: "какойто"},
+		{input: "dog,cat", expected: "dog,cat"},
+		{input: "dog...cat", expected: "dog...cat"},
+		{input: "dogcat", expected: "dogcat"},
+		{input: "-------", expected: "-------"},
+		{input: "-", expected: ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			result := Trasform(tc.input)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+var text1 = `Как видите, он  спускается  по  Лестнице  вслед  за  своим Кристофером   Робином,
+                                                              за  своим    Кристофером   Робином,
+                                                              за  своим `
+
 func TestDebugCase(_ *testing.T) {
-	var text = `Как видите, он  спускается  по  Лестнице  вслед  за  своим    Кристофером   Робином,
-		                                                         за  своим    Кристофером   Робином,
-		                                                         за  своим `
 	TopSize = 3
-	result := Top10(text)
+	result := Top10(text1)
 	for _, r := range result {
 		fmt.Println(r)
 	}
 	TopSize = 10
+	expected := []string{
+		"empty",
+		"in",
+		"no",
+		"string",
+		"empty",
+	}
+	k := Top10("no words in empty string")
+	fmt.Printf("%v\n%v", k, expected)
 }
 
 // Change to true if needed.
-var taskWithAsteriskIsCompleted = false
+var taskWithAsteriskIsCompleted = true
 
 var text = `Как видите, он  спускается  по  лестнице  вслед  за  своим
 	другом   Кристофером   Робином,   головой   вниз,  пересчитывая
@@ -59,6 +118,37 @@ var text = `Как видите, он  спускается  по  лестни�
 func TestTop10(t *testing.T) {
 	t.Run("no words in empty string", func(t *testing.T) {
 		require.Len(t, Top10(""), 0)
+	})
+
+	t.Run("no", func(t *testing.T) {
+		require.Equal(t, Top10("no"), []string{"no"})
+	})
+	t.Run("0 1 2 3 4 5 6 7 8 9", func(t *testing.T) {
+		require.Equal(t, Top10("0 1 2 3 4 5 6 7 8 9"), []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"})
+	})
+
+	t.Run("no words in empty string", func(t *testing.T) {
+		expected := []string{
+			"empty",
+			"in",
+			"no",
+			"string",
+			"words",
+		}
+		k := Top10("no words in empty string")
+		require.Equal(t, expected, k)
+	})
+
+	t.Run("no no no no no no no no no no no no no no no no words in empty string", func(t *testing.T) {
+		expected := []string{
+			"no",
+			"empty",
+			"in",
+			"string",
+			"words",
+		}
+		k := Top10("no no no no no no no no no no no no no no no no words in empty string")
+		require.Equal(t, expected, k)
 	})
 
 	t.Run("positive test", func(t *testing.T) {
