@@ -150,6 +150,15 @@ func TestList_RemoveFront(t *testing.T) {
 	checkInvariancts(t, t0)
 	assert.Equal(t, 20, t0.front.Value)
 	assert.Equal(t, 2, t0.len)
+
+	t0.RemoveFront()
+	checkInvariancts(t, t0)
+	assert.Equal(t, 30, t0.front.Value)
+	assert.Equal(t, 1, t0.len)
+
+	t0.RemoveFront()
+	checkInvariancts(t, t0)
+	assert.Equal(t, 0, t0.len)
 }
 
 func TestList_RemoveBack(t *testing.T) {
@@ -170,12 +179,46 @@ func TestList_RemoveBack(t *testing.T) {
 	checkInvariancts(t, t0)
 	assert.Equal(t, 30, t0.back.Value)
 	assert.Equal(t, 3, t0.len)
+
+	t0.RemoveBack()
+
+	checkInvariancts(t, t0)
+	assert.Equal(t, 20, t0.back.Value)
+	assert.Equal(t, 2, t0.len)
+
+	t0.RemoveBack()
+
+	checkInvariancts(t, t0)
+	assert.Equal(t, 10, t0.back.Value)
+	assert.Equal(t, 1, t0.len)
+
+	t0.RemoveBack()
+
+	checkInvariancts(t, t0)
+	assert.Equal(t, 0, t0.len)
 }
 
 func TestList_Remove(t *testing.T) {
 	var t0 t_list
 
-	t0.Remove(nil)
+	t10 := t0.PushBack(10) //
+	t20 := t0.PushBack(20) //
+	t30 := t0.PushBack(30) //
+	t40 := t0.PushBack(40) //
+
+	checkInvariancts(t, t0)
+
+	t0.Remove(t20)
+	checkInvariancts(t, t0)
+
+	t0.Remove(t10)
+	checkInvariancts(t, t0)
+
+	t0.Remove(t40)
+	checkInvariancts(t, t0)
+
+	t0.Remove(t30)
+	checkInvariancts(t, t0)
 }
 
 func TestList(t *testing.T) {

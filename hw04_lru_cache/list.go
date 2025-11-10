@@ -74,14 +74,24 @@ func (l *list) PushFront(v interface{}) *ListItem {
 }
 
 func (l *list) RemoveFront() {
-	l.front = l.front.Next
-	l.front.Prev = nil
+	if l.len == 1 {
+		l.front = nil
+		l.back = nil
+	} else {
+		l.front = l.front.Next
+		l.front.Prev = nil
+	}
 	l.len--
 }
 
 func (l *list) RemoveBack() {
-	l.back = l.back.Prev
-	l.back.Next = nil
+	if l.len == 1 {
+		l.front = nil
+		l.back = nil
+	} else {
+		l.back = l.back.Prev
+		l.back.Next = nil
+	}
 	l.len--
 }
 
