@@ -36,6 +36,14 @@ func checkInvariancts(t *testing.T, t0 t_list) {
 	}
 }
 
+func getElements(l List) []int {
+	elems := make([]int, 0, l.Len())
+	for i := l.Front(); i != nil; i = i.Next {
+		elems = append(elems, i.Value.(int))
+	}
+	return elems
+}
+
 func Test_list_ctor(t *testing.T) {
 	var t0 t_list
 
@@ -196,6 +204,43 @@ func TestList_RemoveBack(t *testing.T) {
 
 	checkInvariancts(t, t0)
 	assert.Equal(t, 0, t0.len)
+}
+
+func TestList_MoveToFront(t *testing.T) {
+	var t0 t_list
+
+	t0.PushBack(10) //
+
+	checkInvariancts(t, t0)
+
+	t0.MoveToFront(t0.front)
+
+	checkInvariancts(t, t0)
+	assert.Equal(t, 1, t0.len)
+	assert.Equal(t, 10, t0.front.Value)
+
+	t0.PushBack(20) //
+
+	t0.MoveToFront(t0.front)
+	checkInvariancts(t, t0)
+	assert.Equal(t, 2, t0.len)
+	assert.Equal(t, 10, t0.front.Value)
+	assert.Equal(t, 20, t0.front.Next.Value)
+
+	t0.MoveToFront(t0.front.Next)
+	checkInvariancts(t, t0)
+	assert.Equal(t, 2, t0.len)
+	assert.Equal(t, 20, t0.front.Value)
+	assert.Equal(t, 10, t0.front.Next.Value)
+
+	t0.PushFront(30) //
+
+	t0.MoveToFront(t0.front.Next)
+	checkInvariancts(t, t0)
+	assert.Equal(t, 3, t0.len)
+	assert.Equal(t, 20, t0.front.Value)
+	assert.Equal(t, 30, t0.front.Next.Value)
+	assert.Equal(t, 10, t0.front.Next.Next.Value)
 }
 
 func TestList_Remove(t *testing.T) {
