@@ -1,6 +1,10 @@
 package hw04lrucache
 
 type Key string
+type cacheItem struct {
+	key   Key
+	value interface{}
+}
 
 type Cache interface {
 	Set(key Key, value interface{}) bool
@@ -14,6 +18,38 @@ type lruCache struct {
 	capacity int
 	queue    List
 	items    map[Key]*ListItem
+}
+
+func (r *lruCache) Set(key Key, value interface{}) bool {
+	// check the key
+	if item, exist := r.items[key]; exist {
+		// there is such key -> move its forward and update its value
+		r.queue.MoveToFront(item)
+		item.Value = cacheItem{key: key, value: value}
+		return true
+	}
+
+	// check if the cache is full
+	if r.queue.Len() == r.capacity {
+		// remove oldest
+		b := r.queue.Back()
+		r.queue.Remove(b)
+		delete(r.items, b.Value.(cacheItem).key)
+	}
+
+	// add new element to head of list and to the map
+	item := r.queue.PushFront(cacheItem{key: key, value: value})
+	r.items[key] = item
+
+	return false
+}
+
+func (r *lruCache) Get(key Key) (interface{}, bool) {
+	var ret interface{}
+	return ret, false
+}
+
+func (r *lruCache) Clear() {
 }
 
 func NewCache(capacity int) Cache {

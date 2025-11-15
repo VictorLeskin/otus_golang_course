@@ -36,13 +36,13 @@ func checkInvariancts(t *testing.T, t0 t_list) {
 	}
 }
 
-func getElements(l List) []int {
-	elems := make([]int, 0, l.Len())
-	for i := l.Front(); i != nil; i = i.Next {
-		elems = append(elems, i.Value.(int))
-	}
-	return elems
-}
+//func getElements(l List) []int {
+//	elems := make([]int, 0, l.Len())
+//	for i := l.Front(); i != nil; i = i.Next {
+//		elems = append(elems, i.Value.(int))
+//	}
+//	return elems
+//}
 
 func Test_list_ctor(t *testing.T) {
 	var t0 t_list

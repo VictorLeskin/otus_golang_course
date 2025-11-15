@@ -6,8 +6,108 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func Test_NewCache(t *testing.T) {
+	t0 := NewCache(3)
+	t1 := t0.(*lruCache)
+
+	assert.Equal(t, 3, t1.capacity)
+	assert.Equal(t, 0, t1.queue.Len())
+	assert.Equal(t, 0, len(t1.items))
+}
+
+func Test_lruCase_Set(t *testing.T) {
+
+	//  A
+	t0 := NewCache(3)
+	k := t0.Set("A", 111)
+
+	assert.False(t, k)
+	t1 := t0.(*lruCache)
+	assert.Equal(t, 3, t1.capacity)
+	assert.Equal(t, 1, t1.queue.Len())
+	assert.Equal(t, 1, len(t1.items))
+
+	ki := t1.queue.Front().Value.(cacheItem)
+	assert.Equal(t, Key("A"), ki.key)
+	assert.Equal(t, 111, ki.value)
+
+	v, ok := t1.items["A"]
+	assert.True(t, ok)
+	k1 := v.Value.(cacheItem)
+	assert.Equal(t, Key("A"), k1.key)
+	assert.Equal(t, 111, k1.value)
+
+	//  B
+	t0.Set("B", 222)
+
+	assert.False(t, k)
+	assert.Equal(t, 3, t1.capacity)
+	assert.Equal(t, 2, t1.queue.Len())
+	assert.Equal(t, 2, len(t1.items))
+
+	ki = t1.queue.Front().Value.(cacheItem)
+	assert.Equal(t, Key("B"), ki.key)
+	assert.Equal(t, 222, ki.value)
+
+	_, ok = t1.items["B"]
+	assert.True(t, ok)
+
+	//  A
+	k = t0.Set("A", 111111)
+	assert.True(t, k)
+	assert.Equal(t, 3, t1.capacity)
+	assert.Equal(t, 2, t1.queue.Len())
+	assert.Equal(t, 2, len(t1.items))
+
+	ki = t1.queue.Front().Value.(cacheItem)
+	assert.Equal(t, Key("A"), ki.key)
+	assert.Equal(t, 111111, ki.value)
+
+	_, ok = t1.items["A"]
+	assert.True(t, ok)
+
+	//  C
+	k = t0.Set("C", 333)
+
+	assert.False(t, k)
+	assert.Equal(t, 3, t1.capacity)
+	assert.Equal(t, 3, t1.queue.Len())
+	assert.Equal(t, 3, len(t1.items))
+
+	ki = t1.queue.Front().Value.(cacheItem)
+	assert.Equal(t, Key("C"), ki.key)
+	assert.Equal(t, 333, ki.value)
+
+	_, ok = t1.items["C"]
+	assert.True(t, ok)
+
+	//  D
+	k = t0.Set("D", 444)
+
+	assert.False(t, k)
+	assert.Equal(t, 3, t1.capacity)
+	assert.Equal(t, 3, t1.queue.Len())
+	assert.Equal(t, 3, len(t1.items))
+
+	ki = t1.queue.Front().Value.(cacheItem)
+	assert.Equal(t, Key("D"), ki.key)
+	assert.Equal(t, 444, ki.value)
+
+	_, ok = t1.items["D"]
+	assert.True(t, ok)
+	_, ok = t1.items["C"]
+	assert.True(t, ok)
+	_, ok = t1.items["A"]
+	assert.True(t, ok)
+}
+
+func Test_lruCase_Get(t *testing.T) {
+	assert.True(t, false)
+}
 
 func TestCache(t *testing.T) {
 	t.Run("empty cache", func(t *testing.T) {
