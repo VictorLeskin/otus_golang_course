@@ -106,7 +106,30 @@ func Test_lruCase_Set(t *testing.T) {
 }
 
 func Test_lruCase_Get(t *testing.T) {
-	assert.True(t, false)
+	//  A
+	t0 := NewCache(3)
+	t1 := t0.(*lruCache)
+
+	_ = t0.Set("A", 111)
+	_ = t0.Set("B", 222)
+
+	ki := t1.queue.Front().Value.(cacheItem)
+	assert.Equal(t, Key("B"), ki.key)
+
+	res, ok := t0.Get("A")
+	assert.True(t, ok)
+	assert.Equal(t, 111, res)
+	ki = t1.queue.Front().Value.(cacheItem)
+	assert.Equal(t, Key("A"), ki.key)
+
+	res, ok = t0.Get("B")
+	assert.True(t, ok)
+	assert.Equal(t, 222, res)
+	ki = t1.queue.Front().Value.(cacheItem)
+	assert.Equal(t, Key("B"), ki.key)
+
+	_, ok = t0.Get("C")
+	assert.False(t, ok)
 }
 
 func TestCache(t *testing.T) {

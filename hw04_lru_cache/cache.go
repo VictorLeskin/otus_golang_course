@@ -45,8 +45,12 @@ func (r *lruCache) Set(key Key, value interface{}) bool {
 }
 
 func (r *lruCache) Get(key Key) (interface{}, bool) {
-	var ret interface{}
-	return ret, false
+	if item, exist := r.items[key]; exist {
+		// there is such key -> move its forward and update its value
+		r.queue.MoveToFront(item)
+		return item.Value.(cacheItem).value, true
+	}
+	return nil, false
 }
 
 func (r *lruCache) Clear() {
