@@ -20,7 +20,6 @@ func Test_NewCache(t *testing.T) {
 }
 
 func Test_lruCase_Set(t *testing.T) {
-
 	//  A
 	t0 := NewCache(3)
 	k := t0.Set("A", 111)
@@ -133,7 +132,6 @@ func Test_lruCase_Get(t *testing.T) {
 }
 
 func Test_lruCase_Clear(t *testing.T) {
-
 	//  A
 	t0 := NewCache(3)
 	t1 := t0.(*lruCache)
@@ -201,7 +199,7 @@ func TestCache(t *testing.T) {
 		require.Nil(t, val)
 	})
 
-	t.Run("purge logic", func(t *testing.T) {
+	t.Run("purge logic", func(_ *testing.T) {
 		// Write me
 	})
 }

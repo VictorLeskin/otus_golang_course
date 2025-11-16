@@ -1,6 +1,7 @@
 package hw04lrucache
 
 type Key string
+
 type cacheItem struct {
 	key   Key
 	value interface{}

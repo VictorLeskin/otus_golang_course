@@ -7,11 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type t_list struct {
+type testList struct {
 	list
 }
 
-func checkInvariancts(t *testing.T, t0 t_list) {
+func checkInvariancts(t *testing.T, t0 testList) {
+	t.Helper()
 	if t0.len == 0 {
 		require.Nil(t, t0.front)
 		require.Nil(t, t0.back)
@@ -20,7 +21,7 @@ func checkInvariancts(t *testing.T, t0 t_list) {
 		require.Nil(t, t0.back.Next)
 
 		current := t0.front
-		var previous *ListItem = nil
+		var previous *ListItem
 
 		for current != nil {
 			// Проверяем, что current->prev ведет на предыдущий узел, который мы запомнили
@@ -36,16 +37,16 @@ func checkInvariancts(t *testing.T, t0 t_list) {
 	}
 }
 
-//func getElements(l List) []int {
-//	elems := make([]int, 0, l.Len())
-//	for i := l.Front(); i != nil; i = i.Next {
-//		elems = append(elems, i.Value.(int))
-//	}
-//	return elems
-//}
+func GetElements(l List) []interface{} {
+	elems := make([]interface{}, 0, l.Len())
+	for i := l.Front(); i != nil; i = i.Next {
+		elems = append(elems, i.Value)
+	}
+	return elems
+}
 
 func Test_list_ctor(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	assert.Equal(t, 0, t0.len)
 	assert.Nil(t, t0.front)
@@ -53,7 +54,7 @@ func Test_list_ctor(t *testing.T) {
 }
 
 func Test_list_Init(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	t0.Init(222)
 
@@ -67,7 +68,7 @@ func Test_list_Init(t *testing.T) {
 }
 
 func TestList_Len(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	assert.Equal(t, 0, t0.Len())
 	t0.len = 22
@@ -75,7 +76,7 @@ func TestList_Len(t *testing.T) {
 }
 
 func TestList_Front(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	assert.Nil(t, t0.Front())
 	var t1 ListItem
@@ -84,7 +85,7 @@ func TestList_Front(t *testing.T) {
 }
 
 func TestList_Back(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	assert.Nil(t, t0.Back())
 	var t1 ListItem
@@ -93,7 +94,7 @@ func TestList_Back(t *testing.T) {
 }
 
 func TestList_PushFront(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	checkInvariancts(t, t0)
 	assert.Nil(t, t0.Front())
@@ -118,7 +119,7 @@ func TestList_PushFront(t *testing.T) {
 }
 
 func TestList_PushBack(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	checkInvariancts(t, t0)
 	assert.Nil(t, t0.Back())
@@ -143,7 +144,7 @@ func TestList_PushBack(t *testing.T) {
 }
 
 func TestList_RemoveFront(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	t0.PushBack(10) //
 	t0.PushBack(20) //
@@ -170,7 +171,7 @@ func TestList_RemoveFront(t *testing.T) {
 }
 
 func TestList_RemoveBack(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	t0.PushBack(10) //
 	t0.PushBack(20) //
@@ -207,7 +208,7 @@ func TestList_RemoveBack(t *testing.T) {
 }
 
 func TestList_MoveToFront(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	t0.PushBack(10) //
 
@@ -244,7 +245,7 @@ func TestList_MoveToFront(t *testing.T) {
 }
 
 func TestList_Remove(t *testing.T) {
-	var t0 t_list
+	var t0 testList
 
 	t10 := t0.PushBack(10) //
 	t20 := t0.PushBack(20) //
