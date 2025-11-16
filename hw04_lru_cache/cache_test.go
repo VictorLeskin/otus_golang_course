@@ -132,6 +132,35 @@ func Test_lruCase_Get(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func Test_lruCase_Clear(t *testing.T) {
+
+	//  A
+	t0 := NewCache(3)
+	t1 := t0.(*lruCache)
+
+	assert.Equal(t, 3, t1.capacity)
+	assert.Equal(t, 0, t1.queue.Len())
+	assert.Equal(t, 0, len(t1.items))
+
+	t0.Clear()
+	assert.Equal(t, 0, t1.queue.Len())
+	assert.Equal(t, 0, len(t1.items))
+
+	_ = t0.Set("A", 111)
+	_ = t0.Set("B", 222)
+	assert.Equal(t, 2, t1.queue.Len())
+	assert.Equal(t, 2, len(t1.items))
+	res, ok := t0.Get("A")
+	assert.True(t, ok)
+	assert.Equal(t, 111, res)
+
+	t0.Clear()
+	assert.Equal(t, 0, t1.queue.Len())
+	assert.Equal(t, 0, len(t1.items))
+	_, ok = t0.Get("A")
+	assert.False(t, ok)
+}
+
 func TestCache(t *testing.T) {
 	t.Run("empty cache", func(t *testing.T) {
 		c := NewCache(10)
