@@ -14,11 +14,11 @@ type Cache interface {
 }
 
 type lruCache struct {
-	Cache // Remove me after realization.
-
 	capacity int
 	queue    List
 	items    map[Key]*ListItem
+
+	Mutex mutex
 }
 
 func (r *lruCache) Set(key Key, value interface{}) bool {
