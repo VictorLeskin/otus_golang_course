@@ -1,7 +1,6 @@
 package hw04lrucache
 
 import (
-	"fmt"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -36,7 +35,6 @@ func checkValidity(t *lruCache) ([]cacheItem, bool) {
 		}
 	}
 
-	fmt.Print(elems)
 	return elems, true
 }
 
@@ -358,7 +356,7 @@ func TestCacheAutomated(t *testing.T) {
 	}
 }
 
-func TestCacheMultithreading(t *testing.T) {
+func TestCacheMultithreading(_ *testing.T) {
 	c := NewCache(10)
 	wg := &sync.WaitGroup{}
 	wg.Add(2)

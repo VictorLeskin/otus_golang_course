@@ -1,5 +1,9 @@
 package hw04lrucache
 
+import (
+	"sync"
+)
+
 type Key string
 
 type cacheItem struct {
@@ -18,10 +22,13 @@ type lruCache struct {
 	queue    List
 	items    map[Key]*ListItem
 
-	Mutex mutex
+	mutex sync.Mutex
 }
 
 func (r *lruCache) Set(key Key, value interface{}) bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	// check the key
 	if item, exist := r.items[key]; exist {
 		// there is such key -> move its forward and update its value
@@ -46,6 +53,9 @@ func (r *lruCache) Set(key Key, value interface{}) bool {
 }
 
 func (r *lruCache) Get(key Key) (interface{}, bool) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	if item, exist := r.items[key]; exist {
 		// there is such key -> move its forward and update its value
 		r.queue.MoveToFront(item)
@@ -55,6 +65,9 @@ func (r *lruCache) Get(key Key) (interface{}, bool) {
 }
 
 func (r *lruCache) Clear() {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	for b := r.queue.Back(); b != nil; b = b.Prev {
 		r.queue.Remove(b)
 		delete(r.items, b.Value.(cacheItem).key)
