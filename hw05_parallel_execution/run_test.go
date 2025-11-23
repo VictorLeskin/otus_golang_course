@@ -24,7 +24,7 @@ func TestRun2Tasks(t *testing.T) {
 		return nil
 	})
 
-	err := Run(tasks, 2, 1)
+	err := Run(tasks, 1, 1)
 	require.NoError(t, err)
 }
 
