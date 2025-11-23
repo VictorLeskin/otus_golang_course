@@ -12,6 +12,22 @@ import (
 	"go.uber.org/goleak"
 )
 
+func TestRun2Tasks(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	tasks := make([]Task, 0, 2)
+	tasks = append(tasks, func() error {
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	})
+	tasks = append(tasks, func() error {
+		time.Sleep(time.Millisecond * 3)
+		return nil
+	})
+
+	err := Run(tasks, 2, 1)
+	require.NoError(t, err)
+}
+
 func TestRun(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
