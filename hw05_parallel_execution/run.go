@@ -2,7 +2,6 @@ package hw05parallelexecution
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 )
 
@@ -20,11 +19,13 @@ type WorkerPool struct {
 
 	chanTasks   chan Task
 	chanResults chan error
+	done        chan struct{}
 
-	numWorkers int
-	wg         sync.WaitGroup
-	done       chan struct{}
-	errorCount int
+	numWorkers                int
+	wg                        sync.WaitGroup
+	finishedCount, errorCount int
+
+	result error
 }
 
 func (t *Worker) Run(task Task) {
@@ -35,10 +36,13 @@ func NewWorkerPool(tasks []Task, n, m int) *WorkerPool {
 	// Place your code here.
 	workerPool := WorkerPool{tasks: tasks,
 		processesCount: n, maxErrors: m,
-		chanTasks:   make(chan Task, len(tasks)),
-		chanResults: make(chan error, len(tasks)),
-		numWorkers:  min(len(tasks), n),
-		errorCount:  0,
+		chanTasks:     make(chan Task, len(tasks)),
+		chanResults:   make(chan error, len(tasks)),
+		done:          make(chan struct{}),
+		numWorkers:    min(len(tasks), n),
+		finishedCount: 0,
+		errorCount:    0,
+		result:        nil,
 	}
 
 	return &workerPool
@@ -61,10 +65,7 @@ func (t *WorkerPool) Run() error {
 						return
 					}
 					err := task()
-					if err != nil {
-						t.chanResults <- err
-					}
-
+					t.chanResults <- err
 				}
 			}
 		}()
@@ -80,13 +81,20 @@ func (t *WorkerPool) Run() error {
 				return
 			}
 
+			t.finishedCount++
 			if result != nil {
 				t.errorCount++
 				if t.errorCount >= t.maxErrors {
 					// Контекст отменен, завершаем работу
+					t.result = ErrErrorsLimitExceeded
 					close(t.done)
 					return
 				}
+			}
+			// Больше задач не осталось, заверщаем работу
+			if t.finishedCount >= len(t.tasks) {
+				close(t.done)
+				return
 			}
 		}
 	}()
@@ -99,15 +107,13 @@ func (t *WorkerPool) Run() error {
 	t.wg.Wait()
 	close(t.chanResults)
 
-	return nil
+	return t.result
 }
 
 // Run starts tasks in n goroutines and stops its work when receiving m errors from tasks.
 func Run(tasks []Task, n, m int) error {
 	// Place your code here.
 	workerPool := NewWorkerPool(tasks, n, m)
-
-	fmt.Print(workerPool)
 
 	return workerPool.Run()
 }
