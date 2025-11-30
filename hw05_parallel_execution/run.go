@@ -65,7 +65,12 @@ func (t *WorkerPool) Run() error {
 						return
 					}
 					err := task()
-					t.chanResults <- err
+
+					select {
+					case t.chanResults <- err:
+					case <-t.done:
+						return
+					}
 				}
 			}
 		}()
