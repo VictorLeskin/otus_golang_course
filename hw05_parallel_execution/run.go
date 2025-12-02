@@ -10,8 +10,7 @@ var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
 type Task func() error
 
 // worker.
-type Worker struct {
-}
+type Worker struct{}
 
 type WorkerPool struct {
 	tasks          []Task
@@ -35,7 +34,8 @@ func (t *Worker) Run(task Task) {
 
 func NewWorkerPool(tasks []Task, n, m int) *WorkerPool {
 	// Place your code here.
-	workerPool := WorkerPool{tasks: tasks,
+	workerPool := WorkerPool{
+		tasks:          tasks,
 		processesCount: n, maxErrors: m,
 		chanTasks:     make(chan Task, len(tasks)),
 		chanResults:   make(chan error, len(tasks)),
