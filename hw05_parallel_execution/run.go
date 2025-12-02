@@ -65,12 +65,7 @@ func (t *WorkerPool) Run() error {
 						return
 					}
 					err := task()
-
-					select {
-					case t.chanResults <- err:
-					case <-t.done:
-						return
-					}
+					t.chanResults <- err
 				}
 			}
 		}()
@@ -80,34 +75,40 @@ func (t *WorkerPool) Run() error {
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
+		defer close(t.chanTasks)
+		defer close(t.done)
+
+		// распределить первые m задач среди workers. Остальные задачи
+		// будуте распределены по мере освобождения workers
+		for i := 0; i < t.numWorkers; i++ {
+			t.chanTasks <- t.tasks[i]
+		}
+		taskCnt := t.numWorkers
+
 		for {
 			result, ok := <-t.chanResults
 			if !ok {
 				return
 			}
 
-			t.finishedCount++
 			if result != nil {
 				t.errorCount++
 				if t.errorCount >= t.maxErrors {
 					// Контекст отменен, завершаем работу
 					t.result = ErrErrorsLimitExceeded
-					close(t.done)
 					return
 				}
 			}
-			// Больше задач не осталось, заверщаем работу
-			if t.finishedCount >= len(t.tasks) {
-				close(t.done)
+
+			if taskCnt < len(t.tasks) {
+				t.chanTasks <- t.tasks[taskCnt]
+				taskCnt++
+			} else {
+				// Больше задач не осталось, заверщаем работу
 				return
 			}
 		}
 	}()
-
-	for _, task := range t.tasks {
-		t.chanTasks <- task
-	}
-	close(t.chanTasks)
 
 	t.wg.Wait()
 	close(t.chanResults)
