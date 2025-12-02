@@ -12,6 +12,7 @@ import (
 	"go.uber.org/goleak"
 )
 
+// test with 2 tasks.
 func TestRun2Tasks(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	tasks := make([]Task, 0, 2)

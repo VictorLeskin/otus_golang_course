@@ -9,6 +9,7 @@ var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
 
 type Task func() error
 
+// worker.
 type Worker struct {
 }
 
