@@ -48,26 +48,66 @@ func NewWorkerPool(tasks []Task, n, m int) *WorkerPool {
 	return &workerPool
 }
 
-func (t *WorkerPool) Run() error {
+// take a task from a channel, execute the task and send a result to a channel.
+func (t *WorkerPool) exeTasks() {
+	for {
+		select {
+		case <-t.done:
+			// Контекст отменен, завершаем работу
+			return
+		case task, ok := <-t.chanTasks:
+			if !ok {
+				// Канал закрыт, заданий больше нет
+				return
+			}
+			err := task()
+			t.chanResults <- err
+		}
+	}
+}
 
+func (t *WorkerPool) watchTasks() {
+	defer close(t.chanTasks)
+	defer close(t.done)
+
+	// распределить первые m задач среди workers. Остальные задачи
+	// будуте распределены по мере освобождения workers
+	for i := 0; i < t.numWorkers; i++ {
+		t.chanTasks <- t.tasks[i]
+	}
+	taskCnt := t.numWorkers
+
+	for {
+		result, ok := <-t.chanResults
+		if !ok {
+			return
+		}
+
+		if result != nil {
+			t.errorCount++
+			if t.errorCount >= t.maxErrors {
+				// Контекст отменен, завершаем работу
+				t.result = ErrErrorsLimitExceeded
+				return
+			}
+		}
+
+		if taskCnt < len(t.tasks) {
+			t.chanTasks <- t.tasks[taskCnt]
+			taskCnt++
+		} else {
+			// Больше задач не осталось, заверщаем работу
+			return
+		}
+	}
+}
+
+func (t *WorkerPool) Run() error {
 	for range t.numWorkers {
 		t.wg.Add(1)
 		go func() {
 			defer t.wg.Done()
-			for {
-				select {
-				case <-t.done:
-					// Контекст отменен, завершаем работу
-					return
-				case task, ok := <-t.chanTasks:
-					if !ok {
-						// Канал закрыт, заданий больше нет
-						return
-					}
-					err := task()
-					t.chanResults <- err
-				}
-			}
+			t.exeTasks()
 		}()
 	}
 
@@ -75,39 +115,7 @@ func (t *WorkerPool) Run() error {
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
-		defer close(t.chanTasks)
-		defer close(t.done)
-
-		// распределить первые m задач среди workers. Остальные задачи
-		// будуте распределены по мере освобождения workers
-		for i := 0; i < t.numWorkers; i++ {
-			t.chanTasks <- t.tasks[i]
-		}
-		taskCnt := t.numWorkers
-
-		for {
-			result, ok := <-t.chanResults
-			if !ok {
-				return
-			}
-
-			if result != nil {
-				t.errorCount++
-				if t.errorCount >= t.maxErrors {
-					// Контекст отменен, завершаем работу
-					t.result = ErrErrorsLimitExceeded
-					return
-				}
-			}
-
-			if taskCnt < len(t.tasks) {
-				t.chanTasks <- t.tasks[taskCnt]
-				taskCnt++
-			} else {
-				// Больше задач не осталось, заверщаем работу
-				return
-			}
-		}
+		t.watchTasks()
 	}()
 
 	t.wg.Wait()
