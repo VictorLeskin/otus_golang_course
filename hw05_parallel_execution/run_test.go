@@ -105,9 +105,7 @@ func TestRun(t *testing.T) {
 
 // test with 2 tasks.
 func TestRunTasks_1(t *testing.T) {
-
-	// Создаем новый генератор с fixed seed
-	// for stabilty of tests
+	// Создаем новый генератор с fixed seed	for stabilty of tests
 	source := rand.NewSource(99)
 	r := rand.New(source)
 
