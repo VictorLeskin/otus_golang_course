@@ -13,6 +13,23 @@ import (
 )
 
 // test with 2 tasks.
+func TestRun10Tasks_IgnoreErrors(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	tasksCount := 10
+	tasks := make([]Task, 0, tasksCount)
+	for i := 0; i < tasksCount; i++ {
+		err := fmt.Errorf("error from task %d", i)
+		tasks = append(tasks, func() error {
+			time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
+			return err
+		})
+	}
+
+	err := Run(tasks, 4, 0)
+	require.NoError(t, err)
+}
+
+// test with 2 tasks.
 func TestRun2Tasks(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	tasks := make([]Task, 0, 2)
@@ -84,4 +101,66 @@ func TestRun(t *testing.T) {
 		require.Equal(t, int32(tasksCount), runTasksCount, "not all tasks were completed")
 		require.LessOrEqual(t, int64(elapsedTime), int64(sumTime/2), "tasks were run sequentially?")
 	})
+}
+
+// test with 2 tasks.
+func TestRunTasks_1(t *testing.T) {
+
+	// Создаем новый генератор с fixed seed
+	// for stabilty of tests
+	source := rand.NewSource(99)
+	r := rand.New(source)
+
+	tests := []struct {
+		taskWOECount   int // count of task without error
+		taskWECount    int // count of task with error
+		workersCount   int
+		maxErrorsCount int
+		noError        bool
+	}{
+		{10, 0, 4, 0, true},
+		{10, 0, 4, 1, true},
+		{10, 1, 4, 1, false},
+		{1, 9, 4, 8, true},
+		{1, 9, 4, 8, false},
+		{1, 0, 4, 0, false},
+		{0, 1, 4, 2, false},
+		{0, 1, 4, 1, true},
+		{1, 0, 1, 0, false},
+		{0, 1, 1, 2, false},
+		{0, 1, 1, 1, true},
+	}
+
+	for n, tc := range tests {
+		_ = n
+		func() {
+			defer goleak.VerifyNone(t)
+			taskCount := tc.taskWOECount + tc.taskWECount
+			tasks := make([]Task, 0, taskCount)
+			for i := 0; i < tc.taskWECount; i++ {
+				err := fmt.Errorf("error from task %d", i)
+				tasks = append(tasks, func() error {
+					time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
+					return err
+				})
+			}
+			for i := 0; i < tc.taskWOECount; i++ {
+				tasks = append(tasks, func() error {
+					time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
+					return nil
+				})
+			}
+
+			r.Shuffle(len(tasks), func(i, j int) {
+				tasks[i], tasks[j] = tasks[j], tasks[i]
+			})
+
+			err := Run(tasks, tc.workersCount, tc.maxErrorsCount)
+			if tc.noError {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		}()
+	}
 }

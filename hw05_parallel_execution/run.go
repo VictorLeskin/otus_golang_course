@@ -9,9 +9,6 @@ var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
 
 type Task func() error
 
-// worker.
-type Worker struct{}
-
 type WorkerPool struct {
 	tasks          []Task
 	processesCount int // count of processes
@@ -26,10 +23,6 @@ type WorkerPool struct {
 	finishedCount, errorCount int
 
 	result error
-}
-
-func (t *Worker) Run(task Task) {
-	_ = task
 }
 
 func NewWorkerPool(tasks []Task, n, m int) *WorkerPool {
@@ -85,11 +78,13 @@ func (t *WorkerPool) watchTasks() {
 		}
 
 		if result != nil {
-			t.errorCount++
-			if t.errorCount >= t.maxErrors {
-				// Контекст отменен, завершаем работу
-				t.result = ErrErrorsLimitExceeded
-				return
+			if t.maxErrors > 0 {
+				t.errorCount++
+				if t.errorCount >= t.maxErrors {
+					// Контекст отменен, завершаем работу
+					t.result = ErrErrorsLimitExceeded
+					return
+				}
 			}
 		}
 
