@@ -78,8 +78,8 @@ func (t *WorkerPool) watchTasks() {
 		}
 
 		if result != nil {
+			t.errorCount++
 			if t.maxErrors > 0 {
-				t.errorCount++
 				if t.errorCount >= t.maxErrors {
 					// Контекст отменен, завершаем работу
 					t.result = ErrErrorsLimitExceeded
