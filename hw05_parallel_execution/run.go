@@ -70,6 +70,7 @@ func (t *WorkerPool) watchTasks() {
 		t.chanTasks <- t.tasks[i]
 	}
 	taskCnt := t.numWorkers
+	finishedTasks := 0
 
 	for {
 		result, ok := <-t.chanResults
@@ -88,12 +89,14 @@ func (t *WorkerPool) watchTasks() {
 			}
 		}
 
+		finishedTasks++
+		if finishedTasks >= len(t.tasks) {
+			return
+		}
+
 		if taskCnt < len(t.tasks) {
 			t.chanTasks <- t.tasks[taskCnt]
 			taskCnt++
-		} else {
-			// Больше задач не осталось, заверщаем работу
-			return
 		}
 	}
 }
