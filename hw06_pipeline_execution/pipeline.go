@@ -10,17 +10,18 @@ type Stage func(in In) (out Out)
 
 func createStage(in In, done In, stage Stage) Out {
 	out := make(Bi)
+	// Запускаем оригинальный stage
+	stageOut := stage(in)
+
 	go func() {
-		defer close(out)
-
-		// Запускаем оригинальный stage
-		stageOut := stage(in)
-
+		// Вычищаем канал оригинального stage иначе stage зависает на ожидании в очереди
 		defer func() {
 			for v := range stageOut {
 				_ = v
 			}
 		}()
+
+		defer close(out)
 
 		for {
 			select {
