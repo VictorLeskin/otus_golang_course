@@ -67,7 +67,7 @@ func TestSendDoneImmediately(t *testing.T) {
 	wg.Wait()
 
 	require.Len(t, result, 0)
-	require.Less(t, int64(elapsed), int64(1))
+	require.Less(t, int64(elapsed), 2*sleepPerStage)
 }
 
 func TestSendDone(t *testing.T) {
