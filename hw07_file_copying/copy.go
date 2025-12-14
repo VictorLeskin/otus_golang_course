@@ -1,4 +1,4 @@
-package main
+package hw07_file_copying
 
 import (
 	"errors"
