@@ -12,3 +12,6 @@ git commit -am "Initial commit: fix web path of project. Remove .sync file"
 
 # create branch on github and push the commit
 git push origin %HW%:%HW%
+
+# create join the remove and local branchs
+git branch --set-upstream-to=origin/%HW% %HW%
