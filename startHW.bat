@@ -1,7 +1,10 @@
 set HW=hw02_unpack_string
 set HW=hw03_frequency_analysis
+set HW=hw06_pipeline_execution
+set HW=hw07_file_copying
 
 git switch master
+pause
 
 git checkout -b %HW%
 cd %HW%
