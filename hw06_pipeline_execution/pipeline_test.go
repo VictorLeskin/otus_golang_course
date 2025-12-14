@@ -14,6 +14,62 @@ const (
 	fault         = sleepPerStage / 2
 )
 
+// Send 'done' immediately.
+func TestSendDoneImmediately(t *testing.T) {
+	wg := sync.WaitGroup{}
+	// Stage generator
+	g := func(_ /*name*/ string, f func(v interface{}) interface{}) Stage {
+		return func(in In) Out {
+			out := make(Bi)
+			wg.Add(1)
+			go func() {
+				// defer func() {
+				// 	fmt.Println("End of pipeline function" + name)
+				// 	fmt.Printf("Count of active functions %d\n", count)
+				// }()
+				defer wg.Done()
+				defer close(out)
+				for v := range in {
+					time.Sleep(sleepPerStage)
+					out <- f(v)
+				}
+			}()
+			return out
+		}
+	}
+
+	stages := []Stage{
+		g("Dummy", func(v interface{}) interface{} { return v }),
+		g("Multiplier (* 2)", func(v interface{}) interface{} { return v.(int) * 2 }),
+		g("Adder (+ 100)", func(v interface{}) interface{} { return v.(int) + 100 }),
+		g("Stringifier", func(v interface{}) interface{} { return strconv.Itoa(v.(int)) }),
+	}
+
+	in := make(Bi)
+	done := make(Bi)
+	close(done)
+	data := []int{1, 2, 3, 4, 5}
+
+	go func() {
+		for _, v := range data {
+			in <- v
+		}
+		close(in)
+	}()
+
+	result := make([]string, 0, 10)
+	start := time.Now()
+	for s := range ExecutePipeline(in, done, stages...) {
+		result = append(result, s.(string))
+	}
+	elapsed := time.Since(start)
+
+	wg.Wait()
+
+	require.Len(t, result, 0)
+	require.Less(t, int64(elapsed), int64(1))
+}
+
 func TestSendDone(t *testing.T) {
 	wg := sync.WaitGroup{}
 	// Stage generator
