@@ -10,4 +10,5 @@ rm -rf .sync
 
 git commit -am "Initial commit: fix web path of project. Remove .sync file"
 
-git branch --set-upstream-to=origin/%HW% %HW%
+# create branch on github and push the commit
+git push origin %HW%:%HW%
