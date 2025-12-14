@@ -9,3 +9,5 @@ sed 's/fixme_my_friend/VictorLeskin\/otus_golang_course/' -i go.mod
 rm -rf .sync
 
 git commit -am "Initial commit: fix web path of project. Remove .sync file"
+
+git branch --set-upstream-to=origin/%HW% %HW%
