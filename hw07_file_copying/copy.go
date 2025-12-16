@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -12,9 +13,44 @@ var (
 	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
 )
 
+var bufSize int = 1024
+
 type CommanLineParameter struct {
 	input, output string
 	offset, limit int64
+}
+
+type IOCopyData struct {
+	src           io.Reader
+	dst           io.Writer
+	offset, limit int64
+	buf           []byte
+	done          <-chan struct{}
+	progress      <-chan int
+}
+
+func IOCopy(src io.Reader, dst io.Writer, offset, limit int64) error {
+	buf := make([]byte, bufSize)
+
+	for {
+		// Read to buffer from a intput stream
+		n, err := src.Read(buf)
+		if n > 0 {
+			// Write from buffer to output stream.
+			if _, writeErr := dst.Write(buf[:n]); writeErr != nil {
+				return writeErr
+			}
+		}
+
+		if err != nil {
+			if err == io.EOF {
+				break // Hurra
+			}
+			return err // Ups....
+		}
+	}
+
+	return nil
 }
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
@@ -32,7 +68,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	}
 	defer dstFile.Close()
 
-	return nil
+	return IOCopy(srcFile, dstFile, offset, limit)
 }
 
 func Usage() {
