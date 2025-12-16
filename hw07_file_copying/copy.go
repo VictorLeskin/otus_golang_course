@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 )
 
 var (
@@ -17,7 +18,20 @@ type CommanLineParameter struct {
 }
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
-	// Place your code here.
+	// Open input file.
+	srcFile, err := os.Open(fromPath)
+	if err != nil {
+		return fmt.Errorf("Error opening input file: %s", fromPath)
+	}
+	defer srcFile.Close()
+
+	// Open output file.
+	dstFile, err := os.Open(toPath)
+	if err != nil {
+		return fmt.Errorf("Error opening output file: %s", toPath)
+	}
+	defer dstFile.Close()
+
 	return nil
 }
 
