@@ -95,14 +95,7 @@ func (cp *IOCopyData) copy() error {
 	return nil
 }
 
-func IOCopy(src io.Reader, dst io.Writer, offset, limit int64) error {
-	cp := IOCopyData{
-		src:    src,
-		dst:    dst,
-		offset: offset,
-		limit:  limit,
-	}
-
+func (cp *IOCopyData) main() error {
 	if err := cp.seek(); err != nil {
 		return err
 	}
@@ -111,6 +104,17 @@ func IOCopy(src io.Reader, dst io.Writer, offset, limit int64) error {
 	}
 
 	return nil
+}
+
+func IOCopy(src io.Reader, dst io.Writer, offset, limit int64) error {
+	cp := IOCopyData{
+		src:    src,
+		dst:    dst,
+		offset: offset,
+		limit:  limit,
+	}
+
+	return cp.main()
 }
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
