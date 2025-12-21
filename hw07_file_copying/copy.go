@@ -40,7 +40,7 @@ func (cp *IOCopyData) seekStart() error {
 	if n < cp.offset {
 		return ErrOffsetExceedsFileSize
 	}
-	return err
+	return nil
 }
 
 func (cp *IOCopyData) skipBytes() error {
@@ -53,7 +53,7 @@ func (cp *IOCopyData) skipBytes() error {
 	if n < cp.offset {
 		return ErrOffsetExceedsFileSize
 	}
-	return err
+	return nil
 }
 
 func (cp *IOCopyData) seek() error {
