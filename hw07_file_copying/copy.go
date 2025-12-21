@@ -13,7 +13,9 @@ var (
 	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
 )
 
-var bufSize int = 1024
+const (
+	DEFAULT_BUFFER_SIZE int = 1024
+)
 
 type CommanLineParameter struct {
 	input, output string
@@ -24,7 +26,9 @@ type IOCopyData struct {
 	src           io.Reader
 	dst           io.Writer
 	offset, limit int64
+	bufSize       int
 	buf           []byte
+
 	//	done          <-chan struct{}
 	//	progress      <-chan int
 }
@@ -69,19 +73,31 @@ func (cp *IOCopyData) seek() error {
 	return nil
 }
 
+func (cp *IOCopyData) BufferSize() int {
+	if cp.bufSize == 0 {
+		return DEFAULT_BUFFER_SIZE
+	} else {
+		return cp.bufSize
+	}
+}
+
 func (cp *IOCopyData) copy() error {
-	cp.buf = make([]byte, bufSize)
+	cp.buf = make([]byte, cp.BufferSize())
 
 	for {
 		// Read to buffer from a input stream
 		n, err := cp.src.Read(cp.buf)
 		if n > 0 {
 			// Write from buffer to output stream.
-			toWrite := max(int64(n), cp.limit)
+			toWrite := min(int64(n), cp.limit)
 			if _, writeErr := cp.dst.Write(cp.buf[:toWrite]); writeErr != nil {
 				return writeErr
 			}
 			cp.limit -= toWrite
+		}
+
+		if cp.limit == 0 {
+			break
 		}
 
 		if err != nil {
