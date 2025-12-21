@@ -41,5 +41,5 @@ func Test_TxtProgressBar_Render(t *testing.T) {
 	t1.Update(128)
 	t1.Render()
 	//                  01234567890123456789
-	assert.Equal(t, "\r[#########           ] 50.0% (128/256)", t1.bar)
+	assert.Equal(t, "\r[##########          ] 50.0% (128/256)", t1.bar)
 }

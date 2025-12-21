@@ -25,21 +25,63 @@ type IOCopyData struct {
 	dst           io.Writer
 	offset, limit int64
 	buf           []byte
-	done          <-chan struct{}
-	progress      <-chan int
+	//	done          <-chan struct{}
+	//	progress      <-chan int
 }
 
-func IOCopy(src io.Reader, dst io.Writer, offset, limit int64) error {
-	buf := make([]byte, bufSize)
+func (cp *IOCopyData) seekStart() error {
+	// good boy
+	seeker, _ := cp.src.(io.Seeker)
+	n, err := seeker.Seek(cp.offset, io.SeekStart)
+
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if n < cp.offset {
+		return ErrOffsetExceedsFileSize
+	}
+	return err
+}
+
+func (cp *IOCopyData) skipBytes() error {
+	r := cp.src
+	// copy offset bytest to the Discard ()
+	n, err := io.CopyN(io.Discard, r, cp.offset)
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if n < cp.offset {
+		return ErrOffsetExceedsFileSize
+	}
+	return err
+}
+
+func (cp *IOCopyData) seek() error {
+	if cp.offset != 0 {
+		//  Try to cast to Seeker
+		if _, ok := cp.src.(io.Seeker); ok {
+			return cp.seekStart()
+		} else {
+			return cp.skipBytes()
+		}
+	}
+
+	return nil
+}
+
+func (cp *IOCopyData) copy() error {
+	cp.buf = make([]byte, bufSize)
 
 	for {
-		// Read to buffer from a intput stream
-		n, err := src.Read(buf)
+		// Read to buffer from a input stream
+		n, err := cp.src.Read(cp.buf)
 		if n > 0 {
 			// Write from buffer to output stream.
-			if _, writeErr := dst.Write(buf[:n]); writeErr != nil {
+			toWrite := max(int64(n), cp.limit)
+			if _, writeErr := cp.dst.Write(cp.buf[:toWrite]); writeErr != nil {
 				return writeErr
 			}
+			cp.limit -= toWrite
 		}
 
 		if err != nil {
@@ -53,18 +95,36 @@ func IOCopy(src io.Reader, dst io.Writer, offset, limit int64) error {
 	return nil
 }
 
+func IOCopy(src io.Reader, dst io.Writer, offset, limit int64) error {
+	cp := IOCopyData{
+		src:    src,
+		dst:    dst,
+		offset: offset,
+		limit:  limit,
+	}
+
+	if err := cp.seek(); err != nil {
+		return err
+	}
+	if err := cp.copy(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func Copy(fromPath, toPath string, offset, limit int64) error {
 	// Open input file.
 	srcFile, err := os.Open(fromPath)
 	if err != nil {
-		return fmt.Errorf("Error opening input file: %s", fromPath)
+		return fmt.Errorf("error opening input file: %s", fromPath)
 	}
 	defer srcFile.Close()
 
 	// Open output file.
 	dstFile, err := os.Open(toPath)
 	if err != nil {
-		return fmt.Errorf("Error opening output file: %s", toPath)
+		return fmt.Errorf("error opening output file: %s", toPath)
 	}
 	defer dstFile.Close()
 
