@@ -193,6 +193,7 @@ func (cp *IOCopyData) runProgressUpdater() {
 	defer ticker.Stop()
 
 	updater := func() {
+		// there is a modes when progres bar isn't active.
 		if cp.pb != nil {
 			cp.pb.Update(total)
 			cp.pb.Render()
