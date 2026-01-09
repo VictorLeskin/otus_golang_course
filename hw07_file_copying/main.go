@@ -7,7 +7,6 @@ import (
 )
 
 func main() {
-
 	SetupCommadLineParameters()
 
 	params, err := ParseCommadLine()

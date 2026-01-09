@@ -11,9 +11,10 @@ import (
 
 func TestCopy(t *testing.T) {
 	// Place your code here.
+	_ = t
 }
 
-// Вспомогательная функция для сброса состояния флагов
+// Вспомогательная функция для сброса состояния флагов.
 func resetFlag() {
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 }

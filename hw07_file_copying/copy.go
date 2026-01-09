@@ -14,7 +14,7 @@ var (
 )
 
 const (
-	DEFAULT_BUFFER_SIZE int = 1024
+	DefaultBufferSize int = 1024
 )
 
 type CommanLineParameter struct {
@@ -38,8 +38,8 @@ func (cp *IOCopyData) seekStart() error {
 	seeker, _ := cp.src.(io.Seeker)
 	n, err := seeker.Seek(cp.offset, io.SeekStart)
 
-	if err != nil && err != io.EOF {
-		return err
+	if err != nil && !errors.Is(err, io.EOF) {
+		return err // pass up the nonEOF error.
 	}
 	if n < cp.offset {
 		return ErrOffsetExceedsFileSize
@@ -51,8 +51,8 @@ func (cp *IOCopyData) skipBytes() error {
 	r := cp.src
 	// copy offset bytest to the Discard ()
 	n, err := io.CopyN(io.Discard, r, cp.offset)
-	if err != nil && err != io.EOF {
-		return err
+	if err != nil && !errors.Is(err, io.EOF) {
+		return err // pass up the nonEOF error.
 	}
 	if n < cp.offset {
 		return ErrOffsetExceedsFileSize
@@ -65,9 +65,8 @@ func (cp *IOCopyData) seek() error {
 		//  Try to cast to Seeker
 		if _, ok := cp.src.(io.Seeker); ok {
 			return cp.seekStart()
-		} else {
-			return cp.skipBytes()
 		}
+		return cp.skipBytes()
 	}
 
 	return nil
@@ -75,10 +74,9 @@ func (cp *IOCopyData) seek() error {
 
 func (cp *IOCopyData) BufferSize() int {
 	if cp.bufSize == 0 {
-		return DEFAULT_BUFFER_SIZE
-	} else {
-		return cp.bufSize
+		return DefaultBufferSize
 	}
+	return cp.bufSize
 }
 
 func (cp *IOCopyData) copyNoLimit() error {
@@ -103,13 +101,7 @@ func (cp *IOCopyData) copyNoLimit() error {
 	return nil
 }
 
-func (cp *IOCopyData) copy() error {
-	cp.buf = make([]byte, cp.BufferSize())
-
-	if cp.limit == 0 {
-		return cp.copyNoLimit()
-	}
-
+func (cp *IOCopyData) copyLimit() error {
 	for {
 		// Read to buffer from a input stream
 		n, err := cp.src.Read(cp.buf)
@@ -135,6 +127,16 @@ func (cp *IOCopyData) copy() error {
 	}
 
 	return nil
+}
+
+func (cp *IOCopyData) copy() error {
+	cp.buf = make([]byte, cp.BufferSize())
+
+	if cp.limit == 0 {
+		return cp.copyNoLimit()
+	}
+
+	return cp.copyLimit()
 }
 
 func (cp *IOCopyData) main() error {
@@ -187,7 +189,6 @@ func SetupCommadLineParameters() {
 }
 
 func ParseCommadLine() (ret CommanLineParameter, err error) {
-
 	// Copy a part of a file according to the operands.
 	flag.StringVar(&ret.input, "from", "", "file to read from")
 	flag.StringVar(&ret.output, "to", "", "file to copy")
