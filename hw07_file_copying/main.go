@@ -1,10 +1,11 @@
-package hw07_file_copying
+package main
 
 import (
 	"flag"
 	"fmt"
 	"os"
 )
+
 
 func main() {
 
