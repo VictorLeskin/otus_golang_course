@@ -37,4 +37,5 @@ func (t *TxtProgressBar) Render() {
 	bar := strings.Repeat("#", filled) + strings.Repeat(" ", t.barWidth-filled)
 
 	t.bar = fmt.Sprintf("\r[%s] %.1f%% (%d/%d)", bar, percent, t.processed, t.total)
+	fmt.Print(t.bar)
 }

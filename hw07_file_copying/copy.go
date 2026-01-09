@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
+	"time"
 )
 
 var (
@@ -29,8 +31,10 @@ type IOCopyData struct {
 	bufSize       int
 	buf           []byte
 
-	//	done          <-chan struct{}
-	//	progress      <-chan int
+	pb ProgressBar
+
+	progressChan chan int64 // to show a progreas
+	cancelChan   chan error // to finish
 }
 
 func (cp *IOCopyData) seekStart() error {
@@ -58,6 +62,53 @@ func (cp *IOCopyData) skipBytes() error {
 		return ErrOffsetExceedsFileSize
 	}
 	return nil
+}
+
+func (cp IOCopyData) getStreamSize() (int64, error) {
+	// First: check is it a file.
+	if file, ok := cp.src.(*os.File); ok {
+		stat, err := file.Stat()
+		if err == nil {
+			return stat.Size(), nil
+		}
+
+		return 0, err
+	}
+
+	// Second: check is it supporting Seeker.
+	if _, ok := cp.src.(io.Seeker); ok {
+		// store current position.
+		sz, err := cp.getSeekerSize()
+		if err != nil {
+			return sz, err
+		}
+	}
+
+	return 0, nil
+}
+
+func (cp IOCopyData) getSeekerSize() (int64, error) {
+	seeker, _ := cp.src.(io.Seeker)
+
+	// store current position.
+	current, err := seeker.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return 0, err
+	}
+
+	// go to the end.
+	end, err := seeker.Seek(0, io.SeekEnd)
+	if err != nil {
+		return 0, err
+	}
+
+	// go back.
+	_, err = seeker.Seek(current, io.SeekStart)
+	if err != nil {
+		return 0, err
+	}
+
+	return end, nil
 }
 
 func (cp *IOCopyData) seek() error {
@@ -88,6 +139,9 @@ func (cp *IOCopyData) copyNoLimit() error {
 			if _, writeErr := cp.dst.Write(cp.buf[:n]); writeErr != nil {
 				return writeErr
 			}
+			if cp.pb != nil {
+				cp.progressChan <- int64(n)
+			}
 		}
 
 		if err != nil {
@@ -112,6 +166,9 @@ func (cp *IOCopyData) copyLimit() error {
 				return writeErr
 			}
 			cp.limit -= toWrite
+			if cp.pb != nil {
+				cp.progressChan <- toWrite
+			}
 		}
 
 		if cp.limit == 0 {
@@ -129,20 +186,97 @@ func (cp *IOCopyData) copyLimit() error {
 	return nil
 }
 
-func (cp *IOCopyData) copy() error {
-	cp.buf = make([]byte, cp.BufferSize())
+func (cp *IOCopyData) runProgressUpdater() {
+	var total int64
 
-	if cp.limit == 0 {
-		return cp.copyNoLimit()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	updater := func() {
+		if cp.pb != nil {
+			cp.pb.Update(total)
+			cp.pb.Render()
+		}
 	}
 
-	return cp.copyLimit()
+	for {
+		select {
+		case bytes, ok := <-cp.progressChan:
+			// read from the channel till the last value and update when channel is empty
+			if !ok {
+				updater()
+				return
+			}
+			total += bytes
+
+			// update by time
+		case <-ticker.C:
+			updater()
+
+		case <-cp.cancelChan:
+			return
+		}
+	}
+}
+
+func (cp *IOCopyData) copy() error {
+	// Init channels.
+	cp.progressChan = make(chan int64, 100)
+	cp.cancelChan = make(chan error, 1)
+
+	// Start progress bar.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		cp.runProgressUpdater()
+	}()
+
+	// start copying....
+	cp.buf = make([]byte, cp.BufferSize())
+
+	var err error
+	if cp.limit == 0 {
+		err = cp.copyNoLimit()
+	} else {
+		err = cp.copyLimit()
+	}
+
+	close(cp.progressChan)
+
+	return err
+}
+
+func (cp *IOCopyData) setupProgressBar() error {
+	copyCnt := cp.limit
+
+	if copyCnt == 0 {
+		sz, err := cp.getStreamSize()
+		if err != nil {
+			return err
+		}
+		if sz != 0 {
+			copyCnt = sz - cp.offset
+		}
+	}
+
+	// setup a progress bar to show a progress in percents.
+	if copyCnt != 0 {
+		cp.pb = NewTxtProgressBar(copyCnt, 100)
+	}
+
+	return nil
 }
 
 func (cp *IOCopyData) main() error {
+	if err := cp.setupProgressBar(); err != nil {
+		return err
+	}
+
 	if err := cp.seek(); err != nil {
 		return err
 	}
+
 	if err := cp.copy(); err != nil {
 		return err
 	}
