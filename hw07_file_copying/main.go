@@ -6,7 +6,6 @@ import (
 	"os"
 )
 
-
 func main() {
 
 	SetupCommadLineParameters()
@@ -18,7 +17,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = Copy(params.input, params.output, params.offset, params.offset); err != nil {
+	if err = Copy(params.input, params.output, params.offset, params.limit); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(2)
 	}

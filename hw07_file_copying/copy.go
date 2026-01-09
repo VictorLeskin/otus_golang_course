@@ -81,8 +81,34 @@ func (cp *IOCopyData) BufferSize() int {
 	}
 }
 
+func (cp *IOCopyData) copyNoLimit() error {
+	for {
+		// Read to buffer from a input stream
+		n, err := cp.src.Read(cp.buf)
+		if n > 0 {
+			// Write from buffer to output stream.
+			if _, writeErr := cp.dst.Write(cp.buf[:n]); writeErr != nil {
+				return writeErr
+			}
+		}
+
+		if err != nil {
+			if err == io.EOF {
+				break // Hurra
+			}
+			return err // Ups....
+		}
+	}
+
+	return nil
+}
+
 func (cp *IOCopyData) copy() error {
 	cp.buf = make([]byte, cp.BufferSize())
+
+	if cp.limit == 0 {
+		return cp.copyNoLimit()
+	}
 
 	for {
 		// Read to buffer from a input stream
@@ -142,7 +168,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	defer srcFile.Close()
 
 	// Open output file.
-	dstFile, err := os.Open(toPath)
+	dstFile, err := os.Create(toPath)
 	if err != nil {
 		return fmt.Errorf("error opening output file: %s", toPath)
 	}
