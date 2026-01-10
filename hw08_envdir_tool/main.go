@@ -81,23 +81,6 @@ func processDir(dirPath string) (map[string]string, error) {
 	return envVars, nil
 }
 
-// The function return enviroment variable as map
-func envToMap(env []string) map[string]string {
-
-	envMap := make(map[string]string)
-
-	for _, envLine := range env {
-		// split by first '=' and store
-		if idx := strings.Index(envLine, "="); idx != -1 {
-			key := envLine[:idx]
-			value := envLine[idx+1:]
-			envMap[key] = value
-		}
-	}
-
-	return envMap
-}
-
 func replaceEnvVars(oldEnvVars *map[string]string, replacements map[string]string) {
 	for key, value := range replacements {
 		if value == "" {
