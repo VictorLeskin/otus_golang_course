@@ -251,14 +251,21 @@ func (cp *IOCopyData) copy() error {
 func (cp *IOCopyData) setupProgressBar() error {
 	copyCnt := cp.limit
 
+	sz, err := cp.getStreamSize()
 	if copyCnt == 0 {
-		sz, err := cp.getStreamSize()
+		// Reading till the end of the stream.
 		if err != nil {
 			return err
 		}
+		// If the stream provides a size evalute the count for the progress indicator.
 		if sz != 0 {
 			copyCnt = sz - cp.offset
 		}
+	} else if err == nil {
+		// Reading thje disired count of bytes. If it excees the rest  of the stream side, we should
+		// copy only a tail of the stream.
+		realCnt := sz - cp.offset
+		copyCnt = min(copyCnt, realCnt)
 	}
 
 	// setup a progress bar to show a progress in percents.
