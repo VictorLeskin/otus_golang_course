@@ -37,6 +37,30 @@ func ParseCommadLine() (ret CommanLineParameter, err error) {
 	}, nil
 }
 
+func ConvertDirectoryToStrings(ret CommanLineParameter) (m map[string][]byte, err error) {
+	dirPath := ret.dirName
+	files, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		if strings.Contains(file.Name(), "=") {
+			continue // skip files with '=' in name
+		}
+
+		content, err := os.ReadFile(filepath.Join(dirPath, file.Name()))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "File reading error: %s: %v\n", file.Name(), err)
+			continue
+		}
+
+		m[file.Name()] = content
+	}
+
+	return m, nil
+}
+
 func processFileContent(content []byte) string {
 	if len(content) == 0 {
 		return "" // Empty file
@@ -81,7 +105,7 @@ func processDir(dirPath string) (map[string]string, error) {
 	return envVars, nil
 }
 
-func replaceEnvVars(oldEnvVars *map[string]string, replacements map[string]string) {
+func replaceEnvVars(oldEnvVars *map[string]EnvValue, replacements map[string]string) {
 	for key, value := range replacements {
 		if value == "" {
 			delete(*oldEnvVars, key)
@@ -116,9 +140,11 @@ func Exectute(ret CommanLineParameter) error {
 
 		envVars := envToMap(currentEnv) // convert them to map
 
-		replaceEnvVars(&envVars, vars)
+		k := &envVars.variables
 
-		newEnv := makeEnvVars(envVars)
+		replaceEnvVars(k, vars)
+
+		newEnv := makeEnvVars(envVars.variables)
 
 		return executeCommand(ret, newEnv)
 	} else {
@@ -133,6 +159,12 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 		flag.Usage()
+		os.Exit(1)
+	}
+
+	directoryContent, err := ConvertDirectoryToStrings(params)
+	if err != nil {
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 

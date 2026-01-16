@@ -5,7 +5,9 @@ import (
 	"strings"
 )
 
-type Environment map[string]EnvValue
+type Environment struct {
+	variables map[string]EnvValue
+}
 
 // EnvValue helps to distinguish between empty files and files with the first empty line.
 type EnvValue struct {
@@ -16,14 +18,14 @@ type EnvValue struct {
 // The function return enviroment variable as map
 func envToMap(env []string) Environment {
 
-	envMap := make(Environment)
+	var envMap Environment
 
 	for _, envLine := range env {
 		// split by first '=' and store
 		if idx := strings.Index(envLine, "="); idx != -1 {
 			key := envLine[:idx]
 			value := envLine[idx+1:]
-			envMap[key] = EnvValue{value, false}
+			envMap.variables[key] = EnvValue{value, false}
 		}
 	}
 
@@ -39,5 +41,5 @@ func ReadDir(dir string) (Environment, error) {
 
 	envVars := envToMap(currentEnv) // convert them to map
 
-	return nil, nil
+	return envVars, nil
 }
