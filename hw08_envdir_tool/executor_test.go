@@ -49,7 +49,7 @@ func (os TestOpSystem) ReadFile(name string) ([]byte, error) {
 	if value, exists := os.fileContent[name]; exists {
 		return value, nil
 	}
-	return nil, fmt.Errorf("File reading error")
+	return nil, fmt.Errorf("File reading error %s", name)
 }
 
 func (os TestOpSystem) Environ() []string {
