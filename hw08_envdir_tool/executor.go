@@ -14,7 +14,7 @@ type Executor struct {
 	parameters CommanLineParameter
 
 	dirContent             map[string][]byte
-	newEnviromentVariables map[string]string
+	newEnvironmentVariables map[string]string
 
 	command   string
 	arguments []string
@@ -26,7 +26,7 @@ func NewExecutor(parameters CommanLineParameter) *Executor {
 	return &Executor{parameters: parameters}
 }
 
-func (ex Executor) ExecuteInEnviroment(env []string) error {
+func (ex Executor) ExecuteInEnvironment(env []string) error {
 	cmd := exec.Command(ex.command, ex.arguments...)
 
 	cmd.Stdin = os.Stdin
@@ -43,16 +43,16 @@ func (ex Executor) Execute() error {
 		return err
 	}
 
-	ex.makeNewEnviromentVariables()
+	ex.makeNewEnvironmentVariables()
 
-	er := EnviromentReader{}
+	er := EnvironmentReader{}
 
 	er.SetOs(ex.os)
 	er.Read()
 
-	newEnvVars := er.replaceVariables(ex.newEnviromentVariables)
+	newEnvVars := er.replaceVariables(ex.newEnvironmentVariables)
 
-	if err := ex.ExecuteInEnviroment(newEnvVars); err != nil {
+	if err := ex.ExecuteInEnvironment(newEnvVars); err != nil {
 		return err
 	}
 
@@ -107,16 +107,10 @@ func (ex *Executor) processFileContent(content []byte) string {
 	return firstLine
 }
 
-func (ex *Executor) makeNewEnviromentVariables() {
-	ex.newEnviromentVariables = make(map[string]string)
+func (ex *Executor) makeNewEnvironmentVariables() {
+	ex.newEnvironmentVariables = make(map[string]string)
 
 	for envName, fileContent := range ex.dirContent {
-		ex.newEnviromentVariables[envName] = ex.processFileContent(fileContent)
+		ex.newEnvironmentVariables[envName] = ex.processFileContent(fileContent)
 	}
 }
-
-// RunCmd runs a command + arguments (cmd) with environment variables from env.
-//func RunCmd(cmd []string, env Environment) (returnCode int) {
-//	// Place your code here.
-//	return
-//}

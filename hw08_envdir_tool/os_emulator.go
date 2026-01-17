@@ -15,18 +15,19 @@ type iOpSystem interface {
 type OpSystem struct {
 }
 
-func (os OpSystem) ReadDir(name string) ([]os.DirEntry, error) {
+// For this derived all calls are system calls.
+func (OpSystem) ReadDir(name string) ([]os.DirEntry, error) {
 	return os.ReadDir(name)
 }
 
-func (os OpSystem) ReadFile(name string) ([]byte, error) {
+func (OpSystem) ReadFile(name string) ([]byte, error) {
 	return os.ReadFile(name)
 }
 
-func (os OpSystem) Environ() []string {
+func (OpSystem) Environ() []string {
 	return os.Environ()
 }
 
-func (os OpSystem) Run(cmd *exec.Cmd) error {
+func (OpSystem) Run(cmd *exec.Cmd) error {
 	return cmd.Run()
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -13,7 +14,7 @@ type CommanLineParameter struct {
 }
 
 func Usage() {
-	fmt.Println("Utiltity to run a program with a specified set of enviroment variables.")
+	fmt.Println("Utiltity to run a program with a specified set of environment variables.")
 	flag.PrintDefaults()
 }
 
@@ -49,7 +50,9 @@ func main() {
 	mExec.SetOs(myOS)
 
 	if err := mExec.Execute(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			fmt.Printf("Command exited with code: %d\n", exitErr.ExitCode())
 			os.Exit(exitErr.ExitCode())
 		}
 		fmt.Fprintf(os.Stderr, "envdir: %v\n", err)

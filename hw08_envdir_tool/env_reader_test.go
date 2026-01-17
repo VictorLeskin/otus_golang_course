@@ -11,33 +11,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type Test_OpSystem_ER struct {
-	ret_Environ []string
+type TestOpSystemER struct {
+	retEnviron []string
 }
 
-func (os Test_OpSystem_ER) ReadDir(name string) (t []os.DirEntry, e error) {
+func (os TestOpSystemER) ReadDir(_ string) (t []os.DirEntry, e error) {
 	return t, nil
 }
 
-func (os Test_OpSystem_ER) ReadFile(name string) ([]byte, error) {
+func (os TestOpSystemER) ReadFile(_ string) ([]byte, error) {
 	return []byte{}, nil
 }
 
-func (os Test_OpSystem_ER) Environ() []string {
-	return os.ret_Environ
+func (os TestOpSystemER) Environ() []string {
+	return os.retEnviron
 }
 
-func (os Test_OpSystem_ER) Run(cmd *exec.Cmd) error {
+func (os TestOpSystemER) Run(_ *exec.Cmd) error {
 	return fmt.Errorf("Not implemented")
 }
 
-func Test_EnviromentReader_Read(t *testing.T) {
-	var os Test_OpSystem_ER
-	os.ret_Environ = []string{
+func Test_EnvironmentReader_Read(t *testing.T) {
+	var os TestOpSystemER
+	os.retEnviron = []string{
 		"ABD=99",
 		"Q=\"A string\"",
 	}
-	t0 := EnviromentReader{}
+	t0 := EnvironmentReader{}
 	t0.SetOs(os)
 
 	t0.Read()
@@ -51,9 +51,9 @@ func Test_EnviromentReader_Read(t *testing.T) {
 	require.Equal(t, "\"A string\"", t0.mapCurrentVariables["Q"])
 }
 
-func Test_EnviromentReader_convertVariablesToMap(t *testing.T) {
+func Test_EnvironmentReader_convertVariablesToMap(t *testing.T) {
 	// Place your code here
-	t0 := EnviromentReader{}
+	t0 := EnvironmentReader{}
 	t0.currentVariables = []string{
 		"ABD=99",
 		"Q=\"A string\"",
@@ -64,8 +64,8 @@ func Test_EnviromentReader_convertVariablesToMap(t *testing.T) {
 	require.Equal(t, "\"A string\"", t0.mapCurrentVariables["Q"])
 }
 
-func Test_EnviromentReader_replaceVariables(t *testing.T) {
-	t0 := EnviromentReader{}
+func Test_EnvironmentReader_replaceVariables(t *testing.T) {
+	t0 := EnvironmentReader{}
 	t0.mapCurrentVariables = map[string]string{
 		"A": "0",
 		"B": "1",
@@ -93,15 +93,15 @@ func Test_EnviromentReader_replaceVariables(t *testing.T) {
 	})
 }
 
-func Test_EnviromentReader_makeNewEnviroment(t *testing.T) {
-	t0 := EnviromentReader{}
+func Test_EnvironmentReader_makeNewEnvironment(t *testing.T) {
+	t0 := EnvironmentReader{}
 	t0.mapCurrentVariables = map[string]string{
 		"A": "A string",
 		"B": "1",
 		"C": "9999",
 	}
 
-	res := t0.makeNewEnviroment()
+	res := t0.makeNewEnvironment()
 	sort.Strings(res)
 	require.Equal(t, res, []string{
 		"A=A string",

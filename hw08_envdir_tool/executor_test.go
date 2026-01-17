@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Mock DirEntry implementation for testing
+// Mock DirEntry implementation for testing.
 type mockDirEntry struct {
 	name  string
 	isDir bool
 }
 
-type Test_OpSystem struct {
+type TestOpSystem struct {
 	readDirError string
 	entries      []mockDirEntry
 	fileContent  map[string][]byte
@@ -25,15 +25,15 @@ type Test_OpSystem struct {
 	retRun error
 }
 
-var os_commandHasBeenExecuted []string
-var os_runsEnviroment []string
+var osCommandHasBeenExecuted []string
+var osRunsEnvironment []string
 
 func (m mockDirEntry) Name() string               { return m.name }
 func (m mockDirEntry) IsDir() bool                { return m.isDir }
 func (m mockDirEntry) Type() fs.FileMode          { return 0 }
 func (m mockDirEntry) Info() (fs.FileInfo, error) { return nil, nil }
 
-func (os Test_OpSystem) ReadDir(name string) (t []os.DirEntry, e error) {
+func (os TestOpSystem) ReadDir(_ string) (t []os.DirEntry, e error) {
 	if os.readDirError != "" {
 		return nil, fmt.Errorf(os.readDirError)
 	}
@@ -44,30 +44,28 @@ func (os Test_OpSystem) ReadDir(name string) (t []os.DirEntry, e error) {
 	return t, nil
 }
 
-func (os Test_OpSystem) ReadFile(name string) ([]byte, error) {
+func (os TestOpSystem) ReadFile(name string) ([]byte, error) {
 	// Check if key exists.
 	if value, exists := os.fileContent[name]; exists {
 		return value, nil
-	} else {
-		return nil, fmt.Errorf("File reading error")
 	}
+	return nil, fmt.Errorf("File reading error")
 }
 
-func (os Test_OpSystem) Environ() []string {
+func (os TestOpSystem) Environ() []string {
 	return []string{}
 }
 
-func (os Test_OpSystem) Run(cmd *exec.Cmd) error {
-	os_commandHasBeenExecuted = cmd.Args
-	os_runsEnviroment = cmd.Env
+func (os TestOpSystem) Run(cmd *exec.Cmd) error {
+	osCommandHasBeenExecuted = cmd.Args
+	osRunsEnvironment = cmd.Env
 	return os.retRun
 }
 
 func Test_Executor_ConvertDirectoryToStrings(t *testing.T) {
-
 	// REading file, skip directory and file with '=' in name.
 	{
-		var os Test_OpSystem
+		var os TestOpSystem
 
 		os.entries = []mockDirEntry{
 			{name: "ABC", isDir: false},
@@ -94,7 +92,7 @@ func Test_Executor_ConvertDirectoryToStrings(t *testing.T) {
 
 	// ReadDir error.
 	{
-		var os Test_OpSystem
+		var os TestOpSystem
 		os.readDirError = "Dir reading error"
 
 		parameters := CommanLineParameter{dirName: "testDir"}
@@ -121,32 +119,31 @@ func Test_Executor_processFileContent(t *testing.T) {
 	require.Equal(t, "bar", t0.processFileContent([]byte("bar   \nPLEASE IGNORE SECOND LINE")))
 }
 
-func Test_Executor_makeNewEnviromentVariables(t *testing.T) {
+func Test_Executor_makeNewEnvironmentVariables(t *testing.T) {
 	t0 := Executor{}
 	t0.dirContent = map[string][]byte{
 		"ABC": []byte("bar\nPLEASE IGNORE SECOND LINE"),
 		"DEF": {},
 	}
 
-	t0.makeNewEnviromentVariables()
+	t0.makeNewEnvironmentVariables()
 
-	assert.Equal(t, 2, len(t0.newEnviromentVariables))
-	require.Equal(t, "bar", t0.newEnviromentVariables["ABC"])
-	require.Equal(t, "", t0.newEnviromentVariables["DEF"])
+	assert.Equal(t, 2, len(t0.newEnvironmentVariables))
+	require.Equal(t, "bar", t0.newEnvironmentVariables["ABC"])
+	require.Equal(t, "", t0.newEnvironmentVariables["DEF"])
 }
 
-func Test_Executor_ExecuteInEnviroment(t *testing.T) {
-
-	var os Test_OpSystem
+func Test_Executor_ExecuteInEnvironment(t *testing.T) {
+	var os TestOpSystem
 	t0 := Executor{os: os}
 	t0.command = "cmd"
 	t0.arguments = []string{"1", "2"}
 
 	env := []string{"A=99", "B=88"}
 
-	ret := t0.ExecuteInEnviroment(env)
+	ret := t0.ExecuteInEnvironment(env)
 
-	assert.Equal(t, []string{"cmd", "1", "2"}, os_commandHasBeenExecuted)
-	assert.Equal(t, []string{"A=99", "B=88"}, os_runsEnviroment)
+	assert.Equal(t, []string{"cmd", "1", "2"}, osCommandHasBeenExecuted)
+	assert.Equal(t, []string{"A=99", "B=88"}, osRunsEnvironment)
 	assert.Equal(t, true, ret == nil)
 }
