@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,7 +35,7 @@ func (m mockDirEntry) Info() (fs.FileInfo, error) { return nil, nil }
 
 func (os TestOpSystem) ReadDir(_ string) (t []os.DirEntry, e error) {
 	if os.readDirError != "" {
-		return nil, fmt.Errorf(os.readDirError)
+		return nil, fmt.Errorf("%s", os.readDirError)
 	}
 
 	for _, en := range os.entries {

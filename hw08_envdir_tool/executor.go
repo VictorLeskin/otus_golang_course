@@ -13,7 +13,7 @@ import (
 type Executor struct {
 	parameters CommanLineParameter
 
-	dirContent             map[string][]byte
+	dirContent              map[string][]byte
 	newEnvironmentVariables map[string]string
 
 	command   string
@@ -27,6 +27,7 @@ func NewExecutor(parameters CommanLineParameter) *Executor {
 }
 
 func (ex Executor) ExecuteInEnvironment(env []string) error {
+	//nolint:gosec // It is assumed than the command will be run from a shell so it has been validated before.
 	cmd := exec.Command(ex.command, ex.arguments...)
 
 	cmd.Stdin = os.Stdin
