@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var osCommandHasBeenExecuted, osRunsEnvironment []string
+
 // Mock DirEntry implementation for testing.
 type mockDirEntry struct {
 	name  string
@@ -25,9 +27,6 @@ type TestOpSystem struct {
 
 	retRun error
 }
-
-var osCommandHasBeenExecuted []string
-var osRunsEnvironment []string
 
 func (m mockDirEntry) Name() string               { return m.name }
 func (m mockDirEntry) IsDir() bool                { return m.isDir }
