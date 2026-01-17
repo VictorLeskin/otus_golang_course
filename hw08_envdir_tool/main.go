@@ -1,14 +1,10 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 type CommanLineParameter struct {
@@ -33,87 +29,11 @@ func ParseCommadLine() (ret CommanLineParameter, err error) {
 	return CommanLineParameter{
 		dirName:   os.Args[1],
 		command:   os.Args[2],
-		arguments: os.Args[3:], // вот это самая простая форма
+		arguments: os.Args[3:],
 	}, nil
 }
 
-func ConvertDirectoryToStrings(ret CommanLineParameter) (m map[string][]byte, err error) {
-	dirPath := ret.dirName
-	files, err := os.ReadDir(dirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, file := range files {
-		if strings.Contains(file.Name(), "=") {
-			continue // skip files with '=' in name
-		}
-
-		content, err := os.ReadFile(filepath.Join(dirPath, file.Name()))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "File reading error: %s: %v\n", file.Name(), err)
-			continue
-		}
-
-		m[file.Name()] = content
-	}
-
-	return m, nil
-}
-
-func processFileContent(content []byte) string {
-	if len(content) == 0 {
-		return "" // Empty file
-	}
-
-	// first line
-	scanner := bufio.NewScanner(bytes.NewReader(content))
-	if !scanner.Scan() {
-		return ""
-	}
-
-	firstLine := scanner.Text()
-
-	firstLine = strings.TrimRight(firstLine, " \t") // strip a end of line
-	firstLine = strings.ReplaceAll(firstLine, "\x00", "\n")
-
-	return firstLine
-}
-
-func processDir(dirPath string) (map[string]string, error) {
-	envVars := make(map[string]string)
-
-	files, err := os.ReadDir(dirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, file := range files {
-		if strings.Contains(file.Name(), "=") {
-			continue // skip files with '=' in name
-		}
-
-		content, err := os.ReadFile(filepath.Join(dirPath, file.Name()))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "File reading error: %s: %v\n", file.Name(), err)
-			continue
-		}
-
-		envVars[file.Name()] = processFileContent(content)
-	}
-
-	return envVars, nil
-}
-
-func replaceEnvVars(oldEnvVars *map[string]EnvValue, replacements map[string]string) {
-	for key, value := range replacements {
-		if value == "" {
-			delete(*oldEnvVars, key)
-		} else {
-			(*oldEnvVars)[key] = value
-		}
-	}
-}
+/*
 
 func makeEnvVars(oldEnvVars map[string]string) []string {
 	var env []string
@@ -152,6 +72,8 @@ func Exectute(ret CommanLineParameter) error {
 	}
 }
 
+*/
+
 func main() {
 	SetupCommadLineParameters()
 
@@ -162,14 +84,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	directoryContent, err := ConvertDirectoryToStrings(params)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
+	mExec := NewExecutor(params)
 
-	err = Exectute(params)
-	if err != nil {
+	var myOS OpSystem
+	mExec.SetOs(myOS)
+
+	if err := mExec.Execute(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			os.Exit(exitErr.ExitCode())
 		}
