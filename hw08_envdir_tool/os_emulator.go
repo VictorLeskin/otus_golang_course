@@ -12,8 +12,7 @@ type iOpSystem interface {
 	Run(cmd *exec.Cmd) error
 }
 
-type OpSystem struct {
-}
+type OpSystem struct{}
 
 // For this derived all calls are system calls.
 func (OpSystem) ReadDir(name string) ([]os.DirEntry, error) {

@@ -138,8 +138,8 @@ func Test_Executor_makeNewEnvironmentVariables(t *testing.T) {
 func Test_Executor_ExecuteInEnvironment(t *testing.T) {
 	var os TestOpSystem
 	t0 := Executor{os: os}
-	t0.command = "cmd"
-	t0.arguments = []string{"1", "2"}
+	t0.parameters.command = "cmd"
+	t0.parameters.arguments = []string{"1", "2"}
 
 	env := []string{"A=99", "B=88"}
 

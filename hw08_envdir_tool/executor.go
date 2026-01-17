@@ -16,9 +16,6 @@ type Executor struct {
 	dirContent              map[string][]byte
 	newEnvironmentVariables map[string]string
 
-	command   string
-	arguments []string
-
 	os iOpSystem // to use a real OS or to emulate it in tests.
 }
 
@@ -28,7 +25,7 @@ func NewExecutor(parameters CommanLineParameter) *Executor {
 
 func (ex Executor) ExecuteInEnvironment(env []string) error {
 	//nolint:gosec // It is assumed than the command will be run from a shell so it has been validated before.
-	cmd := exec.Command(ex.command, ex.arguments...)
+	cmd := exec.Command(ex.parameters.command, ex.parameters.arguments...)
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -52,7 +49,6 @@ func (ex Executor) Execute() error {
 	er.Read()
 
 	newEnvVars := er.replaceVariables(ex.newEnvironmentVariables)
-
 	if err := ex.ExecuteInEnvironment(newEnvVars); err != nil {
 		return err
 	}
