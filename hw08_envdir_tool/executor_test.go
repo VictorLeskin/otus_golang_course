@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -69,20 +70,19 @@ func Test_Executor_ConvertDirectoryToStrings(t *testing.T) {
 
 		os.entries = []mockDirEntry{
 			{name: "ABC", isDir: false},
-			// {name: "folder1", isDir: true},
-			// {name: "DEF = 99.go", isDir: false},
+			{name: "folder1", isDir: true},
+			{name: "DEF = 99.go", isDir: false},
 		}
 
 		parameters := CommanLineParameter{dirName: "testDir"}
 
 		os.fileContent = make(map[string][]byte)
-		os.fileContent["testDir\\ABC"] = []byte("bar\nPLEASE IGNORE SECOND LINE")
+		fp := filepath.Join("testDir", "ABC")
+		os.fileContent[fp] = []byte("bar\nPLEASE IGNORE SECOND LINE")
 
 		t0 := Executor{parameters: parameters, os: os}
 
 		err := t0.ConvertDirectoryToStrings()
-
-		assert.Equal(t, []int{}, Trace)
 
 		assert.Equal(t, 1, len(t0.dirContent))
 		assert.Equal(t, nil, err)

@@ -64,36 +64,28 @@ func (ex *Executor) SetOs(os iOpSystem) {
 	ex.os = os
 }
 
-var Trace []int
-
 func (ex *Executor) ConvertDirectoryToStrings() error {
-	Trace = []int{}
-	Trace = append(Trace, 69)
 	files, err := ex.os.ReadDir(ex.parameters.dirName)
 	if err != nil {
 		return err
 	}
 
-	Trace = append(Trace, 75)
 	ex.dirContent = make(map[string][]byte)
 	for _, file := range files {
 		if strings.Contains(file.Name(), "=") {
 			fmt.Fprintf(os.Stderr, "There is '=' in file name: '%s'\n", file.Name())
 			continue // skip files with '=' in name
 		}
-		Trace = append(Trace, 82)
+
 		content, err := ex.os.ReadFile(filepath.Join(ex.parameters.dirName, file.Name()))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "File reading error: %s: %v\n", file.Name(), err)
 			continue
 		}
-		Trace = append(Trace, 88)
 
 		ex.dirContent[file.Name()] = content
-		Trace = append(Trace, 92)
 	}
 
-	Trace = append(Trace, 94)
 	return nil
 }
 
