@@ -35,7 +35,7 @@ func (er *EnviromentReader) convertVariablesToMap() {
 	}
 }
 
-func (er *EnviromentReader) replaceVariables(replacements map[string]string) {
+func (er *EnviromentReader) replaceVariables(replacements map[string]string) (env []string) {
 	for key, value := range replacements {
 		if value == "" {
 			delete(er.mapCurrentVariables, key)
@@ -43,6 +43,8 @@ func (er *EnviromentReader) replaceVariables(replacements map[string]string) {
 			er.mapCurrentVariables[key] = value
 		}
 	}
+
+	return er.makeNewEnviroment()
 }
 
 func (er EnviromentReader) makeNewEnviroment() (env []string) {
@@ -51,27 +53,3 @@ func (er EnviromentReader) makeNewEnviroment() (env []string) {
 	}
 	return env
 }
-
-/*
-type Environment struct {
-	variables map[string]EnvValue
-}
-
-// EnvValue helps to distinguish between empty files and files with the first empty line.
-type EnvValue struct {
-	Value      string
-	NeedRemove bool
-}
-
-// ReadDir reads a specified directory and returns map of env variables.
-// Variables represented as files where filename is name of variable, file first line is a value.
-func ReadDir(dir string) (Environment, error) {
-	// Place your code here
-
-	currentEnv := os.Environ() // enviriment variables  "KEY=VALUE"
-
-	envVars := envToMap(currentEnv) // convert them to map
-
-	return envVars, nil
-}
-*/

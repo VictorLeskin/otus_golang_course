@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -25,19 +26,36 @@ func NewExecutor(parameters CommanLineParameter) *Executor {
 	return &Executor{parameters: parameters}
 }
 
-func (ex Executor) Execute() error {
+func (ex Executor) ExecuteInEnviroment(env []string) error {
+	cmd := exec.Command(ex.command, ex.arguments...)
 
-	err := ex.ConvertDirectoryToStrings()
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	cmd.Env = env
+
+	return ex.os.Run(cmd)
+}
+
+func (ex Executor) Execute() error {
+	if err := ex.ConvertDirectoryToStrings(); err != nil {
+		return err
 	}
 
 	ex.makeNewEnviromentVariables()
 
 	er := EnviromentReader{}
 
-	os.Exit(0)
+	er.SetOs(ex.os)
+	er.Read()
+
+	newEnvVars := er.replaceVariables(ex.newEnviromentVariables)
+
+	if err := ex.ExecuteInEnviroment(newEnvVars); err != nil {
+		return err
+	}
+
 	return nil
 }
 

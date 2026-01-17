@@ -33,47 +33,6 @@ func ParseCommadLine() (ret CommanLineParameter, err error) {
 	}, nil
 }
 
-/*
-
-func makeEnvVars(oldEnvVars map[string]string) []string {
-	var env []string
-	for key, value := range oldEnvVars {
-		env = append(env, key+"="+value)
-	}
-	return env
-}
-
-func executeCommand(ret CommanLineParameter, env []string) error {
-	cmd := exec.Command(ret.command, ret.arguments...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = env
-
-	return cmd.Run()
-}
-
-func Exectute(ret CommanLineParameter) error {
-
-	if vars, err := processDir(ret.dirName); err == nil {
-		currentEnv := os.Environ() // enviriment variables  "KEY=VALUE"
-
-		envVars := envToMap(currentEnv) // convert them to map
-
-		k := &envVars.variables
-
-		replaceEnvVars(k, vars)
-
-		newEnv := makeEnvVars(envVars.variables)
-
-		return executeCommand(ret, newEnv)
-	} else {
-		return err
-	}
-}
-
-*/
-
 func main() {
 	SetupCommadLineParameters()
 
@@ -94,7 +53,7 @@ func main() {
 			os.Exit(exitErr.ExitCode())
 		}
 		fmt.Fprintf(os.Stderr, "envdir: %v\n", err)
-		os.Exit(1)
+		os.Exit(2)
 	}
 
 	os.Exit(0)

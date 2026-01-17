@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
+	"sort"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -22,6 +25,10 @@ func (os Test_OpSystem_ER) ReadFile(name string) ([]byte, error) {
 
 func (os Test_OpSystem_ER) Environ() []string {
 	return os.ret_Environ
+}
+
+func (os Test_OpSystem_ER) Run(cmd *exec.Cmd) error {
+	return fmt.Errorf("Not implemented")
 }
 
 func Test_EnviromentReader_Read(t *testing.T) {
@@ -66,7 +73,7 @@ func Test_EnviromentReader_replaceVariables(t *testing.T) {
 		"D": "3",
 	}
 
-	t0.replaceVariables(map[string]string{
+	res := t0.replaceVariables(map[string]string{
 		"A": "",
 		"C": "100",
 		"D": "",
@@ -77,6 +84,13 @@ func Test_EnviromentReader_replaceVariables(t *testing.T) {
 	assert.Equal(t, "100", t0.mapCurrentVariables["C"])
 	assert.Equal(t, "1", t0.mapCurrentVariables["B"])
 	assert.Equal(t, "There is not such variables", t0.mapCurrentVariables["K"])
+
+	sort.Strings(res)
+	require.Equal(t, res, []string{
+		"B=1",
+		"C=100",
+		"K=There is not such variables",
+	})
 }
 
 func Test_EnviromentReader_makeNewEnviroment(t *testing.T) {
@@ -88,6 +102,7 @@ func Test_EnviromentReader_makeNewEnviroment(t *testing.T) {
 	}
 
 	res := t0.makeNewEnviroment()
+	sort.Strings(res)
 	require.Equal(t, res, []string{
 		"A=A string",
 		"B=1",

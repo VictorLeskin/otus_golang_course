@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -20,7 +21,12 @@ type Test_OpSystem struct {
 	readDirError string
 	entries      []mockDirEntry
 	fileContent  map[string][]byte
+
+	retRun error
 }
+
+var os_commandHasBeenExecuted []string
+var os_runsEnviroment []string
 
 func (m mockDirEntry) Name() string               { return m.name }
 func (m mockDirEntry) IsDir() bool                { return m.isDir }
@@ -51,8 +57,10 @@ func (os Test_OpSystem) Environ() []string {
 	return []string{}
 }
 
-func TestRunCmd(t *testing.T) {
-	// Place your code here
+func (os Test_OpSystem) Run(cmd *exec.Cmd) error {
+	os_commandHasBeenExecuted = cmd.Args
+	os_runsEnviroment = cmd.Env
+	return os.retRun
 }
 
 func Test_Executor_ConvertDirectoryToStrings(t *testing.T) {
@@ -125,4 +133,20 @@ func Test_Executor_makeNewEnviromentVariables(t *testing.T) {
 	assert.Equal(t, 2, len(t0.newEnviromentVariables))
 	require.Equal(t, "bar", t0.newEnviromentVariables["ABC"])
 	require.Equal(t, "", t0.newEnviromentVariables["DEF"])
+}
+
+func Test_Executor_ExecuteInEnviroment(t *testing.T) {
+
+	var os Test_OpSystem
+	t0 := Executor{os: os}
+	t0.command = "cmd"
+	t0.arguments = []string{"1", "2"}
+
+	env := []string{"A=99", "B=88"}
+
+	ret := t0.ExecuteInEnviroment(env)
+
+	assert.Equal(t, []string{"cmd", "1", "2"}, os_commandHasBeenExecuted)
+	assert.Equal(t, []string{"A=99", "B=88"}, os_runsEnviroment)
+	assert.Equal(t, true, ret == nil)
 }
