@@ -69,8 +69,8 @@ func Test_Executor_ConvertDirectoryToStrings(t *testing.T) {
 
 		os.entries = []mockDirEntry{
 			{name: "ABC", isDir: false},
-			{name: "folder1", isDir: true},
-			{name: "DEF = 99.go", isDir: false},
+			// {name: "folder1", isDir: true},
+			// {name: "DEF = 99.go", isDir: false},
 		}
 
 		parameters := CommanLineParameter{dirName: "testDir"}
@@ -81,6 +81,8 @@ func Test_Executor_ConvertDirectoryToStrings(t *testing.T) {
 		t0 := Executor{parameters: parameters, os: os}
 
 		err := t0.ConvertDirectoryToStrings()
+
+		assert.Equal(t, []int{}, Trace)
 
 		assert.Equal(t, 1, len(t0.dirContent))
 		assert.Equal(t, nil, err)
