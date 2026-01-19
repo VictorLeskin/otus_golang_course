@@ -30,13 +30,10 @@ func processField(field reflect.StructField) error {
 }
 
 func Validate(v interface{}) error {
-	fmt.Printf("KKK %+v KKK MMM %T MMM\n", &v, &v)
-
 	rv := reflect.ValueOf(v)
 	rt := rv.Type()
 
 	if rt.Kind() == reflect.Struct {
-		fmt.Println(rt.NumField())
 		for i := 0; i < rt.NumField(); i++ {
 			processField(rt.Field(i))
 		}
