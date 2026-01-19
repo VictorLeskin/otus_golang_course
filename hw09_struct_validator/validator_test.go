@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type UserRole string
@@ -11,8 +13,8 @@ type UserRole string
 // Test the function on different structures and other types.
 type (
 	User struct {
-		ID     string `json:"id" validate:"len:36"`
-		Name   string
+		ID     string          `json:"id" validate:"len:36"`
+		Name   string          `validate:"len:48"`
 		Age    int             `validate:"min:18|max:50"`
 		Email  string          `validate:"regexp:^\\w+@\\w+\\.\\w+$"`
 		Role   UserRole        `validate:"in:admin,stuff"`
@@ -35,6 +37,36 @@ type (
 		Body string `json:"omitempty"`
 	}
 )
+
+func TestValidateMy(t *testing.T) {
+	// try to validate not a struct
+	{
+		i := 42
+		var in interface{}
+		in = i
+		ret := Validate(in)
+
+		require.NotNil(t, ret)
+	}
+
+	{
+		user := User{
+			ID:     "X138-A234",
+			Name:   "Vic",
+			Age:    43,
+			Email:  "vic@in.the.middle.of.nowhere",
+			Role:   "student",
+			Phones: []string{"211-99-22", "303-42-77"},
+			meta:   []byte(""),
+		}
+
+		var in interface{}
+		in = user
+		ret := Validate(in)
+
+		require.Nil(t, ret)
+	}
+}
 
 func TestValidate(t *testing.T) {
 	tests := []struct {
