@@ -3,44 +3,27 @@ package hw09structvalidator
 import (
 	"fmt"
 	"strconv"
-	"strings"
 )
 
 type RuleValidator interface {
 	ValidateValue(value interface{}) error
 }
 
-type LengthValidator struct {
+type LenValidator struct {
 	RuleValidator
-	ruleType string
-	limit    int
+	limit int
 }
 
-func NewLengthValidator(rule string) (RuleValidator, error) {
-	parts := strings.Split(rule, ":")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid rule format: %s", rule)
-	}
-
-	ruleType := parts[0]
-	limitStr := parts[1]
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid limit value in rule %s: %v", rule, err)
-	}
-
-	// Проверяем, что ruleType один из известных
-	if ruleType != "len" {
-		return nil, fmt.Errorf("wrong len rule type: %s", ruleType)
-	}
-
-	return &LengthValidator{
-		ruleType: ruleType,
-		limit:    limit}, nil
+func (v *LenValidator) ValidateValue(value interface{}) error {
+	return nil
 }
 
-func CreateRule(name string, value string) RuleValidator {
+type MinValidator struct {
+	RuleValidator
+	limit int
+}
+
+func CreateRule(name string, value string) (RuleValidator, error) {
 	switch name {
 	case "len":
 		return createRuleLen(value)
@@ -56,11 +39,29 @@ func CreateRule(name string, value string) RuleValidator {
 		break
 	}
 
-	return nil
+	return nil, nil
 }
 
-func createRuleLen(value string) RuleValidator    { return nil }
-func createRuleMin(value string) RuleValidator    { return nil }
-func createRuleMax(value string) RuleValidator    { return nil }
-func createRuleRegexp(value string) RuleValidator { return nil }
-func createRuleIn(value string) RuleValidator     { return nil }
+func createRuleLen(value string) (RuleValidator, error) {
+	limit, err := strconv.Atoi(value)
+	if err != nil {
+		return nil, fmt.Errorf("invalid value in rule  %v", err)
+	}
+
+	return &LenValidator{
+		limit: limit}, nil
+}
+
+func createRuleMin(value string) (RuleValidator, error) {
+	limit, err := strconv.Atoi(value)
+	if err != nil {
+		return nil, fmt.Errorf("invalid value in rule %v", err)
+	}
+
+	return &MinValidator{
+		limit: limit}, nil
+}
+
+func createRuleMax(value string) (RuleValidator, error)    { return nil, nil }
+func createRuleRegexp(value string) (RuleValidator, error) { return nil, nil }
+func createRuleIn(value string) (RuleValidator, error)     { return nil, nil }

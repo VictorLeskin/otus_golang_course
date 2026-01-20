@@ -62,8 +62,11 @@ func (v *CValidator) validateStructField(field reflect.StructField) error {
 func (v *CValidator) createRules(tags []string) (ret []RuleValidator, err error) {
 	for _, t := range tags {
 		s := strings.Split(t, ":")
-		rv := CreateRule(s[0], s[1])
-		_ = rv
+		if rv, err := CreateRule(s[0], s[1]); err != nil {
+			ret = append(ret, rv)
+		} else {
+			return nil, err
+		}
 	}
 	return ret, err
 }
