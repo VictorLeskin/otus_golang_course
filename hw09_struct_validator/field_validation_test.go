@@ -1,0 +1,1 @@
+package hw09structvalidator
