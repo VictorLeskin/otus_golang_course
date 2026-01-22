@@ -2,11 +2,12 @@ package hw09structvalidator
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 )
 
 type RuleValidator interface {
-	ValidateValue(value interface{}) error
+	ValidateValue(tf reflect.StructField, vf reflect.Value) error
 }
 
 type LenValidator struct {
@@ -14,13 +15,22 @@ type LenValidator struct {
 	limit int
 }
 
-func (v *LenValidator) ValidateValue(value interface{}) error {
+func (v *LenValidator) ValidateValue(tp reflect.StructField, vf reflect.Value) error {
+	// get type and value:
+	typ := tp.Type // тип: int
+
+	fmt.Printf("Type: %v\n", typ) // Type: int
+	fmt.Printf("Value: %v\n", vf) // Value: 42
 	return nil
 }
 
 type MinValidator struct {
 	RuleValidator
 	limit int
+}
+
+func (v *MinValidator) ValidateValue(tf reflect.StructField, vf reflect.Value) error {
+	return nil
 }
 
 func CreateRule(name string, value string) (RuleValidator, error) {
@@ -62,6 +72,6 @@ func createRuleMin(value string) (RuleValidator, error) {
 		limit: limit}, nil
 }
 
-func createRuleMax(value string) (RuleValidator, error)    { return nil, nil }
-func createRuleRegexp(value string) (RuleValidator, error) { return nil, nil }
-func createRuleIn(value string) (RuleValidator, error)     { return nil, nil }
+func createRuleMax(value string) (RuleValidator, error)    { _ = value; return nil, nil }
+func createRuleRegexp(value string) (RuleValidator, error) { _ = value; return nil, nil }
+func createRuleIn(value string) (RuleValidator, error)     { _ = value; return nil, nil }
