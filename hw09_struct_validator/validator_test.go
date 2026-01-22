@@ -38,34 +38,33 @@ type (
 	}
 )
 
-func TestValidateMy(t *testing.T) {
+func TestValidateInt(t *testing.T) {
 	// try to validate not a struct
-	{
-		i := 42
-		var in interface{}
-		in = i
-		ret := Validate(in)
+	i := 42
+	var in interface{}
+	in = i
+	ret := Validate(in)
 
-		require.NotNil(t, ret)
+	require.NotNil(t, ret)
+}
+
+func TestValidateStruct(t *testing.T) {
+	// try to validate a struct
+	user := User{
+		ID:     "X138-A234",
+		Name:   "Vic",
+		Age:    43,
+		Email:  "vic@in.the.middle.of.nowhere",
+		Role:   "student",
+		Phones: []string{"211-99-22", "303-42-77"},
+		meta:   []byte(""),
 	}
 
-	{
-		user := User{
-			ID:     "X138-A234",
-			Name:   "Vic",
-			Age:    43,
-			Email:  "vic@in.the.middle.of.nowhere",
-			Role:   "student",
-			Phones: []string{"211-99-22", "303-42-77"},
-			meta:   []byte(""),
-		}
+	var in interface{}
+	in = user
+	ret := Validate(in)
 
-		var in interface{}
-		in = user
-		ret := Validate(in)
-
-		require.Nil(t, ret)
-	}
+	require.Nil(t, ret)
 }
 
 func TestValidate(t *testing.T) {
