@@ -21,8 +21,21 @@ var ErrArgumentNotStructure = fmt.Errorf("argument is not a struct")
 
 type CValidator struct {
 	in interface{}
-	rv reflect.Value
+	rv reflect.Value // intial struct value and type
 	rt reflect.Type
+
+	vErrors []validatingError
+}
+
+func (parent *CValidator) appendValidatingError(ruleName string, fieldName string, index int) {
+	var ve error
+	if index == -1 {
+		ve = fmt.Errorf("Validating error of member '%s' of struct '%s' by rule '%s'", fieldName, parent.rt.Name(), ruleName)
+	} else {
+		ve = fmt.Errorf("Validating error of member '%s[%d]' of struct '%s' by rule '%s'", fieldName, index, parent.rt.Name(), ruleName)
+	}
+
+	parent.vErrors = append(parent.vErrors, ve)
 }
 
 func (v *CValidator) Validate0() error {
@@ -52,9 +65,15 @@ func (v *CValidator) validateStructField(tf reflect.StructField, vf reflect.Valu
 	if validateTag != "" {
 		fmt.Printf("A validate tag of the field %s : %s\n", tf.Name, validateTag)
 		tags := getRules(validateTag)
-		rules, _ := v.createRules(tags)
+		rules, err := v.createRules(tags)
+		if err != nil {
+			return err
+		}
 		for _, r := range rules {
-			r.ValidateValue(tf, vf)
+			err = r.ValidateValue(v, tf, vf)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		fmt.Printf("The field %s hasn't a validate tag\n", tf.Name)
