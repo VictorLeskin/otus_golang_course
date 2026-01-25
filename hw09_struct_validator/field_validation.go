@@ -10,8 +10,25 @@ import (
 type validatingError error
 
 type RuleValidator interface {
-	ValidateValue(parent *CValidator, tp reflect.StructField, rv reflect.Value) error
+	ValidateValue0(parent *CValidator, name string, kind reflect.Kind, rv reflect.Value, index int) error
 	Name() string
+}
+
+func ValidateValue(v RuleValidator, parent *CValidator, tp reflect.StructField, rv reflect.Value) error {
+	// get type
+	rt := tp.Type
+
+	if rt.Kind() == reflect.Slice {
+		elemType := rt.Elem()
+		for i := 0; i < rv.Len(); i++ {
+			if err := v.ValidateValue0(parent, tp.Name, elemType.Kind(), rv.Index(i), i); err != nil {
+				return err
+			}
+		}
+	} else {
+		return v.ValidateValue0(parent, tp.Name, rt.Kind(), rv, -1)
+	}
+	return nil
 }
 
 type LenValidator struct {
@@ -39,13 +56,16 @@ type InValidator struct {
 	enabled []string
 }
 
-func (v *LenValidator) ValidateValue(parent *CValidator, tp reflect.StructField, rv reflect.Value) error {
-	// get type and value:
-	rt := tp.Type
+func (v *LenValidator) ValidateValue0(parent *CValidator, name string, kind reflect.Kind, rv reflect.Value, index int) error {
+	switch kind {
+	case reflect.String:
+		if len(rv.String()) != v.limit {
+			parent.appendValidatingError(v.Name(), name, index)
+		}
 
-	fmt.Printf("Len validator\n")
-	fmt.Printf("Type: %v\n", rt)
-	fmt.Printf("Value: %v\n", rv)
+	default:
+		return fmt.Errorf("Non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
+	}
 	return nil
 }
 
@@ -66,28 +86,12 @@ func (v *MinValidator) ValidateValue0(parent *CValidator, name string, kind refl
 			parent.appendValidatingError(v.Name(), name, index)
 		}
 	default:
-		return fmt.Errorf("Non unsupported type: %s", kind.String())
+		return fmt.Errorf("Non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
 	}
 	return nil
 }
 
-func (v *MinValidator) ValidateValue(parent *CValidator, tp reflect.StructField, rv reflect.Value) error {
-	// get type
-	rt := tp.Type
-
-	if rt.Kind() == reflect.Slice {
-		elemType := rt.Elem()
-		for i := 0; i < rv.Len(); i++ {
-			if err := v.ValidateValue0(parent, tp.Name, elemType.Kind(), rv.Index(i), i); err != nil {
-				return err
-			}
-		}
-	} else {
-		return v.ValidateValue0(parent, tp.Name, rt.Kind(), rv, -1)
-	}
-	return nil
-}
-
+/*
 func (v *MaxValidator) ValidateValue(parent *CValidator, tp reflect.StructField, rv reflect.Value) error {
 	// get type and value:
 	rt := tp.Type
@@ -117,6 +121,7 @@ func (v *InValidator) ValidateValue(parent *CValidator, tp reflect.StructField, 
 	fmt.Printf("Value: %v\n", rv)
 	return nil
 }
+*/
 
 func CreateRule(name string, value string) (RuleValidator, error) {
 	switch name {
@@ -140,7 +145,7 @@ func CreateRule(name string, value string) (RuleValidator, error) {
 func createRuleLen(value string) (RuleValidator, error) {
 	limit, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("invalid value in rule  %v", err)
+		return nil, fmt.Errorf("An invalid value in the rule 'len': %v", err)
 	}
 
 	return &LenValidator{
@@ -166,6 +171,7 @@ func createRuleMax(value string) (RuleValidator, error) {
 	return &MaxValidator{
 		limit: int64(limit)}, nil
 }
+
 func createRuleRegexp(value string) (RuleValidator, error) {
 	// regex.Compile()
 

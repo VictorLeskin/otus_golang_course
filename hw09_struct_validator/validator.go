@@ -70,7 +70,7 @@ func (v *CValidator) validateStructField(tf reflect.StructField, vf reflect.Valu
 			return err
 		}
 		for _, r := range rules {
-			err = r.ValidateValue(v, tf, vf)
+			err = ValidateValue(r, v, tf, vf)
 			if err != nil {
 				return err
 			}
