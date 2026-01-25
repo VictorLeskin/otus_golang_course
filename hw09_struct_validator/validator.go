@@ -1,6 +1,7 @@
 package hw09structvalidator
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -21,6 +22,11 @@ func (v ValidationErrors) Error() (ret string) {
 }
 
 var ErrArgumentNotStructure = fmt.Errorf("argument is not a struct")
+
+var (
+	ErrExecution  = errors.New("execution error")
+	ErrValidation = errors.New("validation failed")
+)
 
 type CValidator struct {
 	in interface{}
@@ -101,5 +107,13 @@ func Validate(i interface{}) error {
 	v.rv = reflect.ValueOf(v.in)
 	v.rt = v.rv.Type()
 
-	return v.validateStruct()
+	if err := v.validateStruct(); err != nil {
+		return fmt.Errorf("%w: %v", ErrExecution, ErrExecution)
+	}
+
+	if 0 == len(v.vErrors) {
+		return nil
+	}
+
+	return fmt.Errorf("%w: %v", ErrValidation, v.vErrors.Error())
 }
