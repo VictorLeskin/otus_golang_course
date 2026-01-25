@@ -242,7 +242,7 @@ func createRuleMin(value string) (RuleValidator, error) {
 func createRuleMax(value string) (RuleValidator, error) {
 	limit, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("invalid value in rule %v", err)
+		return nil, fmt.Errorf("An invalid value in the rule 'max': %v", err)
 	}
 
 	return &MaxValidator{

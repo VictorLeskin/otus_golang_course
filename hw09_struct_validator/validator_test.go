@@ -190,6 +190,79 @@ func Test_CValidator_ValidateStruct(t *testing.T) {
 
 }
 
+func Test_CValidator_validateStructField(t *testing.T) {
+
+	type S0 struct {
+		ID           string  `validate:"len:9"`
+		Age          int     `validate:"min:18|max:50"`
+		meta         string  // no validation
+		Mail         string  `validate:"Len:9"`
+		AverageScore float64 `validate:"len:9"`
+	}
+	user := S0{
+		ID:   "X138-A234 extra symbols",
+		Age:  43,
+		meta: "don't do it!",
+	}
+
+	rt := reflect.TypeOf(user)
+	rv := reflect.ValueOf(user)
+
+	v := &CValidator{ //  CValidator with only neccessary fields
+		rv: rv,
+		rt: rt,
+	}
+
+	// Age: ok
+	{ // chek age
+		typeField := v.rt.Field(1)  // type info
+		valueField := v.rv.Field(1) // value info
+
+		err := v.validateStructField(typeField, valueField)
+		assert.Nil(t, err)
+		assert.Equal(t, 0, len(v.vErrors))
+	}
+
+	// meta: ok - no checking
+	{ // chek age
+		typeField := v.rt.Field(2)  // type info
+		valueField := v.rv.Field(2) // value info
+
+		err := v.validateStructField(typeField, valueField)
+		assert.Nil(t, err)
+		assert.Equal(t, 0, len(v.vErrors))
+	}
+
+	// ID: no errors, but wrong input
+	{ // chek age
+		typeField := v.rt.Field(0)  // type info
+		valueField := v.rv.Field(0) // value info
+
+		err := v.validateStructField(typeField, valueField)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(v.vErrors))
+	}
+
+	// Mail: no such validator
+	{ // chek age
+		typeField := v.rt.Field(3)  // type info
+		valueField := v.rv.Field(3) // value info
+
+		err := v.validateStructField(typeField, valueField)
+		assert.NotNil(t, err)
+	}
+
+	// averageScore: right validator applied to wrong type
+	{ // chek age
+		typeField := v.rt.Field(4)  // type info
+		valueField := v.rv.Field(4) // value info
+
+		err := v.validateStructField(typeField, valueField)
+		assert.NotNil(t, err)
+	}
+
+}
+
 func TestValidateInt(t *testing.T) {
 	// try to validate not a struct
 	i := 42
