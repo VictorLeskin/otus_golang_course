@@ -3,8 +3,10 @@ package hw09structvalidator
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,6 +39,156 @@ type (
 		Body string `json:"omitempty"`
 	}
 )
+
+func Test_ValidationErrors_Error(t *testing.T) {
+	v := ValidationErrors{}
+	v = append(v, ValidationError{Field: "Age", Err: fmt.Errorf("qqqqq")})
+	v = append(v, ValidationError{Field: "Mail", Err: fmt.Errorf("tttt")})
+
+	res := v.Error()
+	expected := "qqqqq\n" + "tttt\n"
+
+	assert.Equal(t, expected, res)
+}
+
+func Test_CValidator_appendValidatingError(t *testing.T) {
+	// simple member
+	{
+		type User = TUser[int]
+
+		user := User{Age: 43}
+
+		t0 := &CValidator{ //  CValidator with only neccessary fields
+			rv: reflect.ValueOf(user),
+			rt: reflect.TypeOf(user),
+		}
+
+		t0.appendValidatingError("min", "Age", -1)
+
+		assert.Equal(t, 1, len(t0.vErrors))
+		expected := "Validating error of member 'Age' of struct 'TUser[int]' by rule 'min'"
+		assert.Equal(t, expected, t0.vErrors[0].Err.Error())
+	}
+
+	// slice
+	{
+		type User = TUser[int]
+
+		user := User{Age: 43}
+
+		t0 := &CValidator{ //  CValidator with only neccessary fields
+			rv: reflect.ValueOf(user),
+			rt: reflect.TypeOf(user),
+		}
+
+		t0.appendValidatingError("min", "Age", 4)
+
+		assert.Equal(t, 1, len(t0.vErrors))
+		expected := "Validating error of member 'Age[4]' of struct 'TUser[int]' by rule 'min'"
+		assert.Equal(t, expected, t0.vErrors[0].Err.Error())
+	}
+}
+
+func Test_CValidator_getRules(t *testing.T) {
+	t0 := &CValidator{}
+
+	assert.Equal(t, []string{"min:4", "len:33"}, t0.getRules("min:4|len:33"))
+}
+
+func Test_CValidator_createRules(t *testing.T) {
+	t0 := &CValidator{}
+
+	// get two rules
+	{
+		res, err := t0.createRules([]string{"min:4", "len:33"})
+
+		assert.Nil(t, err)
+		assert.Equal(t, 2, len(res))
+		v0, b0 := res[0].(*MinValidator)
+		v1, b1 := res[1].(*LenValidator)
+		assert.True(t, b0)
+		assert.True(t, b1)
+		assert.Equal(t, 4, int(v0.limit))
+		assert.Equal(t, 33, int(v1.limit))
+	}
+
+	// error
+	{
+		res, err := t0.createRules([]string{"min:4", "Len:33"})
+
+		assert.NotNil(t, err)
+		assert.Nil(t, res)
+		assert.Equal(t, "Wrong rule 'Len'", err.Error())
+	}
+}
+
+func Test_CValidator_ValidateStruct(t *testing.T) {
+	type S0 struct {
+		ID  string `validate:"len:9"`
+		Age int    `validate:"min:18|max:50"`
+	}
+
+	// successful validation of a whole struct
+	{
+		user := S0{
+			ID:  "X138-A234",
+			Age: 43,
+		}
+
+		rt := reflect.TypeOf(user)
+		rv := reflect.ValueOf(user)
+
+		v := &CValidator{ //  CValidator with only neccessary fields
+			rv: rv,
+			rt: rt,
+		}
+
+		err := v.validateStruct()
+		assert.Nil(t, err)
+		assert.Equal(t, 0, len(v.vErrors))
+	}
+
+	{
+		// failed validation of a field
+		user := S0{
+			ID:  "X138-A234 addition not allowed",
+			Age: 43,
+		}
+
+		rt := reflect.TypeOf(user)
+		rv := reflect.ValueOf(user)
+
+		v := &CValidator{ //  CValidator with only neccessary fields
+			rv: rv,
+			rt: rt,
+		}
+
+		err := v.validateStruct()
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(v.vErrors))
+		expected := "Validating error of member 'ID' of struct 'S0' by rule 'len'"
+		assert.Equal(t, expected, v.vErrors[0].Err.Error())
+	}
+
+	// not a struct
+	{
+		user := 999
+
+		rt := reflect.TypeOf(user)
+		rv := reflect.ValueOf(user)
+
+		v := &CValidator{ //  CValidator with only neccessary fields
+			rv: rv,
+			rt: rt,
+		}
+
+		err := v.validateStruct()
+		assert.NotNil(t, err)
+		expected := "argument is not a struct"
+		assert.Equal(t, expected, err.Error())
+	}
+
+}
 
 func TestValidateInt(t *testing.T) {
 	// try to validate not a struct
