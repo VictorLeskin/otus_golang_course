@@ -8,8 +8,6 @@ import (
 	"strings"
 )
 
-type validatingError error
-
 type RuleValidator interface {
 	ValidateValue0(parent *CValidator, name string, kind reflect.Kind, rv reflect.Value, index int) error
 	Name() string
@@ -218,7 +216,7 @@ func CreateRule(name string, value string) (RuleValidator, error) {
 		break
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("Wrong rule '%s'", name)
 }
 
 func createRuleLen(value string) (RuleValidator, error) {

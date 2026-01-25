@@ -13,8 +13,11 @@ type ValidationError struct {
 
 type ValidationErrors []ValidationError
 
-func (v ValidationErrors) Error() string {
-	panic("implement me")
+func (v ValidationErrors) Error() (ret string) {
+	for _, s := range v {
+		ret = ret + s.Err.Error() + "\n"
+	}
+	return ret
 }
 
 var ErrArgumentNotStructure = fmt.Errorf("argument is not a struct")
@@ -24,7 +27,7 @@ type CValidator struct {
 	rv reflect.Value // intial struct value and type
 	rt reflect.Type
 
-	vErrors []validatingError
+	vErrors ValidationErrors
 }
 
 func (parent *CValidator) appendValidatingError(ruleName string, fieldName string, index int) {
@@ -35,14 +38,23 @@ func (parent *CValidator) appendValidatingError(ruleName string, fieldName strin
 		ve = fmt.Errorf("Validating error of member '%s[%d]' of struct '%s' by rule '%s'", fieldName, index, parent.rt.Name(), ruleName)
 	}
 
-	parent.vErrors = append(parent.vErrors, ve)
+	parent.vErrors = append(parent.vErrors, ValidationError{Field: fieldName, Err: ve})
 }
 
-func (v *CValidator) Validate0() error {
-	v.rv = reflect.ValueOf(v.in)
-	v.rt = v.rv.Type()
+func (v *CValidator) getRules(tag string) []string {
+	return strings.Split(tag, "|")
+}
 
-	return v.validateStruct()
+func (v *CValidator) createRules(tags []string) (ret []RuleValidator, err error) {
+	for _, t := range tags {
+		s := strings.Split(t, ":")
+		if rv, err := CreateRule(s[0], s[1]); err == nil {
+			ret = append(ret, rv)
+		} else {
+			return nil, err
+		}
+	}
+	return ret, err
 }
 
 func (v *CValidator) validateStruct() error {
@@ -50,7 +62,9 @@ func (v *CValidator) validateStruct() error {
 		for i := 0; i < v.rt.NumField(); i++ {
 			typeField := v.rt.Field(i)  // type info
 			valueField := v.rv.Field(i) // value info
-			v.validateStructField(typeField, valueField)
+			if err := v.validateStructField(typeField, valueField); err != nil {
+				return nil
+			}
 		}
 	} else {
 		return ErrArgumentNotStructure
@@ -64,7 +78,7 @@ func (v *CValidator) validateStructField(tf reflect.StructField, vf reflect.Valu
 	validateTag := tf.Tag.Get("validate")
 	if validateTag != "" {
 		fmt.Printf("A validate tag of the field %s : %s\n", tf.Name, validateTag)
-		tags := getRules(validateTag)
+		tags := v.getRules(validateTag)
 		rules, err := v.createRules(tags)
 		if err != nil {
 			return err
@@ -81,23 +95,11 @@ func (v *CValidator) validateStructField(tf reflect.StructField, vf reflect.Valu
 	return nil
 }
 
-func (v *CValidator) createRules(tags []string) (ret []RuleValidator, err error) {
-	for _, t := range tags {
-		s := strings.Split(t, ":")
-		if rv, err := CreateRule(s[0], s[1]); err == nil {
-			ret = append(ret, rv)
-		} else {
-			return nil, err
-		}
-	}
-	return ret, err
-}
+func Validate(i interface{}) error {
+	v := CValidator{in: i}
 
-func getRules(tag string) []string {
-	return strings.Split(tag, "|")
-}
+	v.rv = reflect.ValueOf(v.in)
+	v.rt = v.rv.Type()
 
-func Validate(v interface{}) error {
-	v0 := CValidator{in: v}
-	return v0.Validate0()
+	return v.validateStruct()
 }

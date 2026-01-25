@@ -61,7 +61,7 @@ func Test_RuleValidator_ValidateValue(t *testing.T) {
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
 		expectedText := "Validating error of member 'Age' of struct 'TUser[int]' by rule 'min'"
-		assert.Equal(t, expectedText, validator.vErrors[0].Error())
+		assert.Equal(t, expectedText, validator.vErrors[0].Err)
 	}
 
 	// successful validating of slice int
@@ -98,8 +98,8 @@ func Test_RuleValidator_ValidateValue(t *testing.T) {
 		assert.Equal(t, 2, len(validator.vErrors))
 		expectedText0 := "Validating error of member 'Scores[0]' of struct 'TUser[int]' by rule 'min'"
 		expectedText1 := "Validating error of member 'Scores[1]' of struct 'TUser[int]' by rule 'min'"
-		assert.Equal(t, expectedText0, validator.vErrors[0].Error())
-		assert.Equal(t, expectedText1, validator.vErrors[1].Error())
+		assert.Equal(t, expectedText0, validator.vErrors[0].Err)
+		assert.Equal(t, expectedText1, validator.vErrors[1].Err)
 	}
 
 	// wrong type
@@ -176,7 +176,7 @@ func Test_LenValidator_ValidateValue0(t *testing.T) {
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
 		expectedText := fmt.Sprintf("Validating error of member 'Name' of struct '%s' by rule 'len'", rt.Name())
-		assert.Equal(t, expectedText, validator.vErrors[0].Error())
+		assert.Equal(t, expectedText, validator.vErrors[0].Err)
 	}
 
 	// unsupported type
@@ -254,7 +254,7 @@ func TTest_MinValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *test
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
 		expectedText := fmt.Sprintf("Validating error of member 'Age' of struct '%s' by rule 'min'", rt.Name())
-		assert.Equal(t, expectedText, validator.vErrors[0].Error())
+		assert.Equal(t, expectedText, validator.vErrors[0].Err)
 	}
 
 	// unsupported type
@@ -290,7 +290,6 @@ func Test_MinValidator_ValidateValue0_Int(t *testing.T) {
 	TTest_MinValidator_ValidateValue0[float32](t)
 	TTest_MinValidator_ValidateValue0[float64](t)
 }
-
 
 /************ MaxValidator ************/
 func Test_createRuleMax(t *testing.T) {
@@ -348,7 +347,7 @@ func TTest_MaxValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *test
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
 		expectedText := fmt.Sprintf("Validating error of member 'Age' of struct '%s' by rule 'max'", rt.Name())
-		assert.Equal(t, expectedText, validator.vErrors[0].Error())
+		assert.Equal(t, expectedText, validator.vErrors[0].Err)
 	}
 
 	// unsupported type
@@ -441,7 +440,7 @@ func Test_RegexpValidator_ValidateValue0(t *testing.T) {
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
 		expectedText := fmt.Sprintf("Validating error of member 'Name' of struct '%s' by rule 'regexp'", rt.Name())
-		assert.Equal(t, expectedText, validator.vErrors[0].Error())
+		assert.Equal(t, expectedText, validator.vErrors[0].Err)
 	}
 
 	// unsupported type
@@ -530,7 +529,7 @@ func TTest_InValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *testi
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
 		expectedText := fmt.Sprintf("Validating error of member 'Age' of struct '%s' by rule 'in'", rt.Name())
-		assert.Equal(t, expectedText, validator.vErrors[0].Error())
+		assert.Equal(t, expectedText, validator.vErrors[0].Err)
 	}
 
 	// unsupported type
@@ -590,7 +589,7 @@ func Test_InValidator_ValidateValue0_Str(t *testing.T) {
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
 		expectedText := fmt.Sprintf("Validating error of member 'Name' of struct '%s' by rule 'in'", rt.Name())
-		assert.Equal(t, expectedText, validator.vErrors[0].Error())
+		assert.Equal(t, expectedText, validator.vErrors[0].Err)
 	}
 
 	// unsupported type
