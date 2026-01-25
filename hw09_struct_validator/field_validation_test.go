@@ -35,7 +35,7 @@ func Test_RuleValidator_ValidateValue(t *testing.T) {
 		rv := reflect.ValueOf(user)
 		field, _ := rt.FieldByName("Age")
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -52,7 +52,7 @@ func Test_RuleValidator_ValidateValue(t *testing.T) {
 		rv := reflect.ValueOf(user)
 		field, _ := rt.FieldByName("Age")
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -60,7 +60,7 @@ func Test_RuleValidator_ValidateValue(t *testing.T) {
 		err1 := ValidateValue(t0, validator, field, rv.FieldByName("Age"))
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
-		expectedText := "Validating error of member 'Age' of struct 'TUser[int]' by rule 'min'"
+		expectedText := "validating error of member 'Age' of struct 'TUser[int]' by rule 'min'"
 		assert.Equal(t, expectedText, validator.vErrors[0].Err.Error())
 	}
 
@@ -71,7 +71,7 @@ func Test_RuleValidator_ValidateValue(t *testing.T) {
 		rv := reflect.ValueOf(user)
 		field, _ := rt.FieldByName("Scores")
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -88,7 +88,7 @@ func Test_RuleValidator_ValidateValue(t *testing.T) {
 		rv := reflect.ValueOf(user)
 		field, _ := rt.FieldByName("Scores")
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -96,8 +96,8 @@ func Test_RuleValidator_ValidateValue(t *testing.T) {
 		err1 := ValidateValue(t0, validator, field, rv.FieldByName("Scores"))
 		assert.NoError(t, err1)
 		assert.Equal(t, 2, len(validator.vErrors))
-		expectedText0 := "Validating error of member 'Scores[0]' of struct 'TUser[int]' by rule 'min'"
-		expectedText1 := "Validating error of member 'Scores[1]' of struct 'TUser[int]' by rule 'min'"
+		expectedText0 := "validating error of member 'Scores[0]' of struct 'TUser[int]' by rule 'min'"
+		expectedText1 := "validating error of member 'Scores[1]' of struct 'TUser[int]' by rule 'min'"
 		assert.Equal(t, expectedText0, validator.vErrors[0].Err.Error())
 		assert.Equal(t, expectedText1, validator.vErrors[1].Err.Error())
 	}
@@ -109,19 +109,19 @@ func Test_RuleValidator_ValidateValue(t *testing.T) {
 		rv := reflect.ValueOf(user)
 		field, _ := rt.FieldByName("Unsupported")
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
 
 		err1 := ValidateValue(t0, validator, field, rv.FieldByName("Unsupported"))
 		assert.Error(t, err1)
-		expectedText := "Non unsupported type 'interface' by rule 'min'"
+		expectedText := "non unsupported type 'interface' by rule 'min'"
 		assert.Equal(t, expectedText, err1.Error())
 	}
 }
 
-/************ LenValidator ************/
+/*........... LenValidator ...........*/
 func Test_createRuleLen(t *testing.T) {
 	{
 		res, err := createRuleLen("44")
@@ -134,7 +134,7 @@ func Test_createRuleLen(t *testing.T) {
 
 	{
 		_, err := createRuleLen("A")
-		expectedText := "An invalid value in the rule 'len'"
+		expectedText := "an invalid value in the rule 'len'"
 		assert.Equal(t, true, strings.Contains(err.Error(), expectedText))
 	}
 }
@@ -150,7 +150,7 @@ func Test_LenValidator_ValidateValue0(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Name)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -167,7 +167,7 @@ func Test_LenValidator_ValidateValue0(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Name)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -175,7 +175,7 @@ func Test_LenValidator_ValidateValue0(t *testing.T) {
 		err1 := t0.ValidateValue0(validator, "Name", rv.Type().Kind(), rv, -1)
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
-		expectedText := fmt.Sprintf("Validating error of member 'Name' of struct '%s' by rule 'len'", rt.Name())
+		expectedText := fmt.Sprintf("validating error of member 'Name' of struct '%s' by rule 'len'", rt.Name())
 		assert.Equal(t, expectedText, validator.vErrors[0].Err.Error())
 	}
 
@@ -186,19 +186,19 @@ func Test_LenValidator_ValidateValue0(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
 
 		err1 := t0.ValidateValue0(validator, "Name", rv.Type().Kind(), rv, -1)
 		assert.Error(t, err1)
-		expectedText := "Non unsupported type 'struct' by rule 'len'"
+		expectedText := "non unsupported type 'struct' by rule 'len'"
 		assert.Equal(t, expectedText, err1.Error())
 	}
 }
 
-/************ MinValidator ************/
+/*........... MinValidator ...........*/
 func Test_createRuleMin(t *testing.T) {
 	{
 		res, err := createRuleMin("44")
@@ -211,12 +211,14 @@ func Test_createRuleMin(t *testing.T) {
 
 	{
 		_, err := createRuleMin("A")
-		expectedText := "An invalid value in the rule 'min'"
+		expectedText := "an invalid value in the rule 'min'"
 		assert.Equal(t, true, strings.Contains(err.Error(), expectedText))
 	}
 }
 
-func TTest_MinValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *testing.T) {
+// generic test function depended on type.
+func TTestMinValidatorValidateValue0[T LimitValidatableNumericalTypes](t *testing.T) {
+	t.Helper()
 
 	t0, _ := createRuleMin("42")
 	type User = TUser[T]
@@ -228,7 +230,7 @@ func TTest_MinValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *test
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Age)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -245,7 +247,7 @@ func TTest_MinValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *test
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Age)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -253,7 +255,7 @@ func TTest_MinValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *test
 		err1 := t0.ValidateValue0(validator, "Age", rv.Type().Kind(), rv, -1)
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
-		expectedText := fmt.Sprintf("Validating error of member 'Age' of struct '%s' by rule 'min'", rt.Name())
+		expectedText := fmt.Sprintf("validating error of member 'Age' of struct '%s' by rule 'min'", rt.Name())
 		assert.Equal(t, expectedText, validator.vErrors[0].Err.Error())
 	}
 
@@ -264,34 +266,34 @@ func TTest_MinValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *test
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
 
 		err1 := t0.ValidateValue0(validator, "Age", rv.Type().Kind(), rv, -1)
 		assert.Error(t, err1)
-		expectedText := "Non unsupported type 'struct' by rule 'min'"
+		expectedText := "non unsupported type 'struct' by rule 'min'"
 		assert.Equal(t, expectedText, err1.Error())
 	}
 }
 
 func Test_MinValidator_ValidateValue0_Int(t *testing.T) {
-	TTest_MinValidator_ValidateValue0[int](t)
-	TTest_MinValidator_ValidateValue0[int8](t)
-	TTest_MinValidator_ValidateValue0[int16](t)
-	TTest_MinValidator_ValidateValue0[int32](t)
-	TTest_MinValidator_ValidateValue0[int64](t)
-	TTest_MinValidator_ValidateValue0[uint](t)
-	TTest_MinValidator_ValidateValue0[uint8](t)
-	TTest_MinValidator_ValidateValue0[uint16](t)
-	TTest_MinValidator_ValidateValue0[uint32](t)
-	TTest_MinValidator_ValidateValue0[uint64](t)
-	TTest_MinValidator_ValidateValue0[float32](t)
-	TTest_MinValidator_ValidateValue0[float64](t)
+	TTestMinValidatorValidateValue0[int](t)
+	TTestMinValidatorValidateValue0[int8](t)
+	TTestMinValidatorValidateValue0[int16](t)
+	TTestMinValidatorValidateValue0[int32](t)
+	TTestMinValidatorValidateValue0[int64](t)
+	TTestMinValidatorValidateValue0[uint](t)
+	TTestMinValidatorValidateValue0[uint8](t)
+	TTestMinValidatorValidateValue0[uint16](t)
+	TTestMinValidatorValidateValue0[uint32](t)
+	TTestMinValidatorValidateValue0[uint64](t)
+	TTestMinValidatorValidateValue0[float32](t)
+	TTestMinValidatorValidateValue0[float64](t)
 }
 
-/************ MaxValidator ************/
+/*........... MaxValidator ...........*/
 func Test_createRuleMax(t *testing.T) {
 	{
 		res, err := createRuleMax("44")
@@ -304,12 +306,14 @@ func Test_createRuleMax(t *testing.T) {
 
 	{
 		_, err := createRuleMax("A")
-		expectedText := "An invalid value in the rule 'max'"
+		expectedText := "an invalid value in the rule 'max'"
 		assert.Equal(t, true, strings.Contains(err.Error(), expectedText))
 	}
 }
 
-func TTest_MaxValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *testing.T) {
+// generic test function depended on type.
+func TTestMaxValidatorValidateValue0[T LimitValidatableNumericalTypes](t *testing.T) {
+	t.Helper()
 
 	t0, _ := createRuleMax("42")
 	type User = TUser[T]
@@ -321,7 +325,7 @@ func TTest_MaxValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *test
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Age)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -338,7 +342,7 @@ func TTest_MaxValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *test
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Age)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -346,7 +350,7 @@ func TTest_MaxValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *test
 		err1 := t0.ValidateValue0(validator, "Age", rv.Type().Kind(), rv, -1)
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
-		expectedText := fmt.Sprintf("Validating error of member 'Age' of struct '%s' by rule 'max'", rt.Name())
+		expectedText := fmt.Sprintf("validating error of member 'Age' of struct '%s' by rule 'max'", rt.Name())
 		assert.Equal(t, expectedText, validator.vErrors[0].Err.Error())
 	}
 
@@ -357,34 +361,34 @@ func TTest_MaxValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *test
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
 
 		err1 := t0.ValidateValue0(validator, "Age", rv.Type().Kind(), rv, -1)
 		assert.Error(t, err1)
-		expectedText := "Non unsupported type 'struct' by rule 'max'"
+		expectedText := "non unsupported type 'struct' by rule 'max'"
 		assert.Equal(t, expectedText, err1.Error())
 	}
 }
 
 func Test_MaxValidator_ValidateValue0_Int(t *testing.T) {
-	TTest_MaxValidator_ValidateValue0[int](t)
-	TTest_MaxValidator_ValidateValue0[int8](t)
-	TTest_MaxValidator_ValidateValue0[int16](t)
-	TTest_MaxValidator_ValidateValue0[int32](t)
-	TTest_MaxValidator_ValidateValue0[int64](t)
-	TTest_MaxValidator_ValidateValue0[uint](t)
-	TTest_MaxValidator_ValidateValue0[uint8](t)
-	TTest_MaxValidator_ValidateValue0[uint16](t)
-	TTest_MaxValidator_ValidateValue0[uint32](t)
-	TTest_MaxValidator_ValidateValue0[uint64](t)
-	TTest_MaxValidator_ValidateValue0[float32](t)
-	TTest_MaxValidator_ValidateValue0[float64](t)
+	TTestMaxValidatorValidateValue0[int](t)
+	TTestMaxValidatorValidateValue0[int8](t)
+	TTestMaxValidatorValidateValue0[int16](t)
+	TTestMaxValidatorValidateValue0[int32](t)
+	TTestMaxValidatorValidateValue0[int64](t)
+	TTestMaxValidatorValidateValue0[uint](t)
+	TTestMaxValidatorValidateValue0[uint8](t)
+	TTestMaxValidatorValidateValue0[uint16](t)
+	TTestMaxValidatorValidateValue0[uint32](t)
+	TTestMaxValidatorValidateValue0[uint64](t)
+	TTestMaxValidatorValidateValue0[float32](t)
+	TTestMaxValidatorValidateValue0[float64](t)
 }
 
-/************ RegexpValidator ************/
+/*........... RegexpValidator ...........*/
 func Test_createRuleRegexp(t *testing.T) {
 	{
 		res, err := createRuleRegexp("^[AB]+$")
@@ -398,7 +402,7 @@ func Test_createRuleRegexp(t *testing.T) {
 
 	{
 		_, err := createRuleRegexp("[")
-		expectedText := "An invalid value in the rule 'regexp'"
+		expectedText := "an invalid value in the rule 'regexp'"
 		assert.Equal(t, true, strings.Contains(err.Error(), expectedText))
 	}
 }
@@ -414,7 +418,7 @@ func Test_RegexpValidator_ValidateValue0(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Name)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -431,7 +435,7 @@ func Test_RegexpValidator_ValidateValue0(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Name)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -439,7 +443,7 @@ func Test_RegexpValidator_ValidateValue0(t *testing.T) {
 		err1 := t0.ValidateValue0(validator, "Name", rv.Type().Kind(), rv, -1)
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
-		expectedText := fmt.Sprintf("Validating error of member 'Name' of struct '%s' by rule 'regexp'", rt.Name())
+		expectedText := fmt.Sprintf("validating error of member 'Name' of struct '%s' by rule 'regexp'", rt.Name())
 		assert.Equal(t, expectedText, validator.vErrors[0].Err.Error())
 	}
 
@@ -450,19 +454,19 @@ func Test_RegexpValidator_ValidateValue0(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
 
 		err1 := t0.ValidateValue0(validator, "Name", rv.Type().Kind(), rv, -1)
 		assert.Error(t, err1)
-		expectedText := "Non unsupported type 'struct' by rule 'regexp'"
+		expectedText := "non unsupported type 'struct' by rule 'regexp'"
 		assert.Equal(t, expectedText, err1.Error())
 	}
 }
 
-/************ InValidator ************/
+/*........... InValidator ...........*/
 func Test_createRuleIn(t *testing.T) {
 	{
 		res, err := createRuleIn("123,456")
@@ -491,7 +495,9 @@ func Test_createRuleIn(t *testing.T) {
 	}
 }
 
-func TTest_InValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *testing.T) {
+// generic test function depended on type.
+func TTestInValidatorValidateValue0[T LimitValidatableNumericalTypes](t *testing.T) {
+	t.Helper()
 
 	t0, _ := createRuleIn("42,43")
 	type User = TUser[T]
@@ -503,7 +509,7 @@ func TTest_InValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *testi
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Age)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -520,7 +526,7 @@ func TTest_InValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *testi
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Age)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -528,7 +534,7 @@ func TTest_InValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *testi
 		err1 := t0.ValidateValue0(validator, "Age", rv.Type().Kind(), rv, -1)
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
-		expectedText := fmt.Sprintf("Validating error of member 'Age' of struct '%s' by rule 'in'", rt.Name())
+		expectedText := fmt.Sprintf("validating error of member 'Age' of struct '%s' by rule 'in'", rt.Name())
 		assert.Equal(t, expectedText, validator.vErrors[0].Err.Error())
 	}
 
@@ -539,20 +545,19 @@ func TTest_InValidator_ValidateValue0[T LimitValidatableNumericalTypes](t *testi
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
 
 		err1 := t0.ValidateValue0(validator, "Age", rv.Type().Kind(), rv, -1)
 		assert.Error(t, err1)
-		expectedText := "Non unsupported type 'struct' by rule 'in'"
+		expectedText := "non unsupported type 'struct' by rule 'in'"
 		assert.Equal(t, expectedText, err1.Error())
 	}
 }
 
 func Test_InValidator_ValidateValue0_Str(t *testing.T) {
-
 	t0, _ := createRuleIn("A,B")
 	type User = TUser[int]
 
@@ -563,7 +568,7 @@ func Test_InValidator_ValidateValue0_Str(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Name)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -580,7 +585,7 @@ func Test_InValidator_ValidateValue0_Str(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user.Name)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -588,7 +593,7 @@ func Test_InValidator_ValidateValue0_Str(t *testing.T) {
 		err1 := t0.ValidateValue0(validator, "Name", rv.Type().Kind(), rv, -1)
 		assert.NoError(t, err1)
 		assert.Equal(t, 1, len(validator.vErrors))
-		expectedText := fmt.Sprintf("Validating error of member 'Name' of struct '%s' by rule 'in'", rt.Name())
+		expectedText := fmt.Sprintf("validating error of member 'Name' of struct '%s' by rule 'in'", rt.Name())
 		assert.Equal(t, expectedText, validator.vErrors[0].Err.Error())
 	}
 
@@ -599,29 +604,29 @@ func Test_InValidator_ValidateValue0_Str(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user)
 
-		validator := &CValidator{ //  CValidator with only neccessary fields
+		validator := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
 
 		err1 := t0.ValidateValue0(validator, "Name", rv.Type().Kind(), rv, -1)
 		assert.Error(t, err1)
-		expectedText := "Non unsupported type 'struct' by rule 'in'"
+		expectedText := "non unsupported type 'struct' by rule 'in'"
 		assert.Equal(t, expectedText, err1.Error())
 	}
 }
 
 func Test_InValidator_ValidateValue0_Int(t *testing.T) {
-	TTest_InValidator_ValidateValue0[int](t)
-	TTest_InValidator_ValidateValue0[int8](t)
-	TTest_InValidator_ValidateValue0[int16](t)
-	TTest_InValidator_ValidateValue0[int32](t)
-	TTest_InValidator_ValidateValue0[int64](t)
-	TTest_InValidator_ValidateValue0[uint](t)
-	TTest_InValidator_ValidateValue0[uint8](t)
-	TTest_InValidator_ValidateValue0[uint16](t)
-	TTest_InValidator_ValidateValue0[uint32](t)
-	TTest_InValidator_ValidateValue0[uint64](t)
-	TTest_InValidator_ValidateValue0[float32](t)
-	TTest_InValidator_ValidateValue0[float64](t)
+	TTestInValidatorValidateValue0[int](t)
+	TTestInValidatorValidateValue0[int8](t)
+	TTestInValidatorValidateValue0[int16](t)
+	TTestInValidatorValidateValue0[int32](t)
+	TTestInValidatorValidateValue0[int64](t)
+	TTestInValidatorValidateValue0[uint](t)
+	TTestInValidatorValidateValue0[uint8](t)
+	TTestInValidatorValidateValue0[uint16](t)
+	TTestInValidatorValidateValue0[uint32](t)
+	TTestInValidatorValidateValue0[uint64](t)
+	TTestInValidatorValidateValue0[float32](t)
+	TTestInValidatorValidateValue0[float64](t)
 }
