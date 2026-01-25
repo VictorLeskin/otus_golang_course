@@ -77,7 +77,7 @@ func (v *CValidator) validateStructField(tf reflect.StructField, vf reflect.Valu
 	// get validate tag.
 	validateTag := tf.Tag.Get("validate")
 	if validateTag != "" {
-		fmt.Printf("A validate tag of the field %s : %s\n", tf.Name, validateTag)
+		// fmt.Printf("A validate tag of the field %s : %s\n", tf.Name, validateTag)
 		tags := v.getRules(validateTag)
 		rules, err := v.createRules(tags)
 		if err != nil {
@@ -90,7 +90,7 @@ func (v *CValidator) validateStructField(tf reflect.StructField, vf reflect.Valu
 			}
 		}
 	} else {
-		fmt.Printf("The field %s hasn't a validate tag\n", tf.Name)
+		//fmt.Printf("The field %s hasn't a validate tag\n", tf.Name)
 	}
 	return nil
 }
