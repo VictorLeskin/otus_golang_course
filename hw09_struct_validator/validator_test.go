@@ -2,6 +2,7 @@ package hw09structvalidator
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -15,8 +16,8 @@ type UserRole string
 // Test the function on different structures and other types.
 type (
 	User struct {
-		ID     string          `json:"id" validate:"len:36"`
-		Name   string          `validate:"len:48"`
+		ID     string `json:"id" validate:"len:36"`
+		Name   string
 		Age    int             `validate:"min:18|max:50"`
 		Email  string          `validate:"regexp:^\\w+@\\w+\\.\\w+$"`
 		Role   UserRole        `validate:"in:admin,stuff"`
@@ -263,54 +264,56 @@ func Test_CValidator_validateStructField(t *testing.T) {
 
 }
 
-func TestValidateInt(t *testing.T) {
-	// try to validate not a struct
-	i := 42
-	var in interface{}
-	in = i
-	ret := Validate(in)
+func Test_Validate(t *testing.T) {
 
-	require.NotNil(t, ret)
+	// try to validate not a struct. Should be execution error.
+	{
+		i := 42
+		ret := Validate(i)
+
+		require.True(t, errors.Is(ret, ErrExecution))
+	}
+
+	type S0 struct {
+		ID  string `validate:"len:9"`
+		Age int    `validate:"min:18|max:50"`
+	}
+
+	// a validation error
+	{
+		user := S0{
+			ID:  "X138-A234 extra symbols",
+			Age: 6, // too young for such shit
+		}
+
+		ret := Validate(user)
+		require.True(t, errors.Is(ret, ErrValidation))
+	}
+
+	// ok
+	{
+		user := S0{
+			ID:  "X138-A234",
+			Age: 19,
+		}
+
+		ret := Validate(user)
+		require.Nil(t, ret)
+	}
 }
 
 func TestValidateStruct(t *testing.T) {
 	// try to validate a struct
 	user := User{
-		ID:     "X138-A234",
+		ID:     "012345678901234567890123456789012345",
 		Name:   "Vic",
 		Age:    43,
-		Email:  "vic@in.the.middle.of.nowhere",
-		Role:   "student",
-		Phones: []string{"211-99-22", "303-42-77"},
+		Email:  "vic@in.nowhere",
+		Role:   "admin",
+		Phones: []string{"7-211-99-22", "7-303-42-77"},
 		meta:   []byte(""),
 	}
 
-	var in interface{}
-	in = user
-	ret := Validate(in)
-
+	ret := Validate(user)
 	require.Nil(t, ret)
-}
-
-func TestValidate(t *testing.T) {
-	tests := []struct {
-		in          interface{}
-		expectedErr error
-	}{
-		{
-			// Place your code here.
-		},
-		// ...
-		// Place your code here.
-	}
-
-	for i, tt := range tests {
-		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
-			tt := tt
-			t.Parallel()
-
-			// Place your code here.
-			_ = tt
-		})
-	}
 }
