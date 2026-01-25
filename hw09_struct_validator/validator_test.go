@@ -18,11 +18,11 @@ type (
 	User struct {
 		ID     string `json:"id" validate:"len:36"`
 		Name   string
-		Age    int             `validate:"min:18|max:50"`
-		Email  string          `validate:"regexp:^\\w+@\\w+\\.\\w+$"`
-		Role   UserRole        `validate:"in:admin,stuff"`
-		Phones []string        `validate:"len:11"`
-		meta   json.RawMessage //nolint:unused
+		Age    int      `validate:"min:18|max:50"`
+		Email  string   `validate:"regexp:^\\w+@\\w+\\.\\w+$"`
+		Role   UserRole `validate:"in:admin,stuff"`
+		Phones []string `validate:"len:11"`
+		meta   json.RawMessage
 	}
 
 	App struct {
@@ -59,7 +59,7 @@ func Test_CValidator_appendValidatingError(t *testing.T) {
 
 		user := User{Age: 43}
 
-		t0 := &CValidator{ //  CValidator with only neccessary fields
+		t0 := &CValidator{ //  CValidator with only necessary fields
 			rv: reflect.ValueOf(user),
 			rt: reflect.TypeOf(user),
 		}
@@ -67,7 +67,7 @@ func Test_CValidator_appendValidatingError(t *testing.T) {
 		t0.appendValidatingError("min", "Age", -1)
 
 		assert.Equal(t, 1, len(t0.vErrors))
-		expected := "Validating error of member 'Age' of struct 'TUser[int]' by rule 'min'"
+		expected := "validating error of member 'Age' of struct 'TUser[int]' by rule 'min'"
 		assert.Equal(t, expected, t0.vErrors[0].Err.Error())
 	}
 
@@ -77,7 +77,7 @@ func Test_CValidator_appendValidatingError(t *testing.T) {
 
 		user := User{Age: 43}
 
-		t0 := &CValidator{ //  CValidator with only neccessary fields
+		t0 := &CValidator{ //  CValidator with only necessary fields
 			rv: reflect.ValueOf(user),
 			rt: reflect.TypeOf(user),
 		}
@@ -85,7 +85,7 @@ func Test_CValidator_appendValidatingError(t *testing.T) {
 		t0.appendValidatingError("min", "Age", 4)
 
 		assert.Equal(t, 1, len(t0.vErrors))
-		expected := "Validating error of member 'Age[4]' of struct 'TUser[int]' by rule 'min'"
+		expected := "validating error of member 'Age[4]' of struct 'TUser[int]' by rule 'min'"
 		assert.Equal(t, expected, t0.vErrors[0].Err.Error())
 	}
 }
@@ -110,7 +110,7 @@ func Test_CValidator_createRules(t *testing.T) {
 		assert.True(t, b0)
 		assert.True(t, b1)
 		assert.Equal(t, 4, int(v0.limit))
-		assert.Equal(t, 33, int(v1.limit))
+		assert.Equal(t, 33, v1.limit)
 	}
 
 	// error
@@ -119,7 +119,7 @@ func Test_CValidator_createRules(t *testing.T) {
 
 		assert.NotNil(t, err)
 		assert.Nil(t, res)
-		assert.Equal(t, "Wrong rule 'Len'", err.Error())
+		assert.Equal(t, "wrong rule 'Len'", err.Error())
 	}
 }
 
@@ -139,7 +139,7 @@ func Test_CValidator_ValidateStruct(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user)
 
-		v := &CValidator{ //  CValidator with only neccessary fields
+		v := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -159,7 +159,7 @@ func Test_CValidator_ValidateStruct(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user)
 
-		v := &CValidator{ //  CValidator with only neccessary fields
+		v := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -167,7 +167,7 @@ func Test_CValidator_ValidateStruct(t *testing.T) {
 		err := v.validateStruct()
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(v.vErrors))
-		expected := "Validating error of member 'ID' of struct 'S0' by rule 'len'"
+		expected := "validating error of member 'ID' of struct 'S0' by rule 'len'"
 		assert.Equal(t, expected, v.vErrors[0].Err.Error())
 	}
 
@@ -178,7 +178,7 @@ func Test_CValidator_ValidateStruct(t *testing.T) {
 		rt := reflect.TypeOf(user)
 		rv := reflect.ValueOf(user)
 
-		v := &CValidator{ //  CValidator with only neccessary fields
+		v := &CValidator{ //  CValidator with only necessary fields
 			rv: rv,
 			rt: rt,
 		}
@@ -188,11 +188,9 @@ func Test_CValidator_ValidateStruct(t *testing.T) {
 		expected := "argument is not a struct"
 		assert.Equal(t, expected, err.Error())
 	}
-
 }
 
 func Test_CValidator_validateStructField(t *testing.T) {
-
 	type S0 struct {
 		ID           string  `validate:"len:9"`
 		Age          int     `validate:"min:18|max:50"`
@@ -209,7 +207,7 @@ func Test_CValidator_validateStructField(t *testing.T) {
 	rt := reflect.TypeOf(user)
 	rv := reflect.ValueOf(user)
 
-	v := &CValidator{ //  CValidator with only neccessary fields
+	v := &CValidator{ //  CValidator with only necessary fields
 		rv: rv,
 		rt: rt,
 	}
@@ -261,11 +259,9 @@ func Test_CValidator_validateStructField(t *testing.T) {
 		err := v.validateStructField(typeField, valueField)
 		assert.NotNil(t, err)
 	}
-
 }
 
 func Test_Validate(t *testing.T) {
-
 	// try to validate not a struct. Should be execution error.
 	{
 		i := 42

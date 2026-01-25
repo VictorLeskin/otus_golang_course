@@ -30,21 +30,23 @@ var (
 
 type CValidator struct {
 	in interface{}
-	rv reflect.Value // intial struct value and type
+	rv reflect.Value // initial struct value and type
 	rt reflect.Type
 
 	vErrors ValidationErrors
 }
 
-func (parent *CValidator) appendValidatingError(ruleName string, fieldName string, index int) {
+func (v *CValidator) appendValidatingError(ruleName string, fieldName string, index int) {
 	var ve error
 	if index == -1 {
-		ve = fmt.Errorf("Validating error of member '%s' of struct '%s' by rule '%s'", fieldName, parent.rt.Name(), ruleName)
+		ve = fmt.Errorf("validating error of member '%s' of struct '%s' by rule '%s'",
+			fieldName, v.rt.Name(), ruleName)
 	} else {
-		ve = fmt.Errorf("Validating error of member '%s[%d]' of struct '%s' by rule '%s'", fieldName, index, parent.rt.Name(), ruleName)
+		ve = fmt.Errorf("validating error of member '%s[%d]' of struct '%s' by rule '%s'",
+			fieldName, index, v.rt.Name(), ruleName)
 	}
 
-	parent.vErrors = append(parent.vErrors, ValidationError{Field: fieldName, Err: ve})
+	v.vErrors = append(v.vErrors, ValidationError{Field: fieldName, Err: ve})
 }
 
 func (v *CValidator) getRules(tag string) []string {
@@ -69,7 +71,7 @@ func (v *CValidator) validateStruct() error {
 			typeField := v.rt.Field(i)  // type info
 			valueField := v.rv.Field(i) // value info
 			if err := v.validateStructField(typeField, valueField); err != nil {
-				return nil
+				return err
 			}
 		}
 	} else {
@@ -95,9 +97,8 @@ func (v *CValidator) validateStructField(tf reflect.StructField, vf reflect.Valu
 				return err
 			}
 		}
-	} else {
-		//fmt.Printf("The field %s hasn't a validate tag\n", tf.Name)
 	}
+	// else { // fmt.Printf("The field %s hasn't a validate tag\n", tf.Name)}
 	return nil
 }
 
@@ -108,12 +109,12 @@ func Validate(i interface{}) error {
 	v.rt = v.rv.Type()
 
 	if err := v.validateStruct(); err != nil {
-		return fmt.Errorf("%w: %v", ErrExecution, ErrExecution)
+		return fmt.Errorf("%w: %w", ErrExecution, err)
 	}
 
-	if 0 == len(v.vErrors) {
+	if len(v.vErrors) == 0 {
 		return nil
 	}
 
-	return fmt.Errorf("%w: %v", ErrValidation, v.vErrors.Error())
+	return fmt.Errorf("%w: %s", ErrValidation, v.vErrors.Error())
 }

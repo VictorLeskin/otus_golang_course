@@ -9,7 +9,8 @@ import (
 )
 
 type RuleValidator interface {
-	ValidateValue0(parent *CValidator, name string, kind reflect.Kind, rv reflect.Value, index int) error
+	ValidateValue0(parent *CValidator, name string,
+		kind reflect.Kind, rv reflect.Value, index int) error
 	Name() string
 }
 
@@ -62,21 +63,23 @@ type InValidator struct {
 	errEnabledFlt error
 }
 
-func (v *LenValidator) ValidateValue0(parent *CValidator, name string, kind reflect.Kind, rv reflect.Value, index int) error {
-	switch kind {
+func (v *LenValidator) ValidateValue0(parent *CValidator, name string,
+	kind reflect.Kind, rv reflect.Value, index int) error {
+	switch kind { //nolint:exhaustive
 	case reflect.String:
 		if len(rv.String()) != v.limit {
 			parent.appendValidatingError(v.Name(), name, index)
 		}
 
 	default:
-		return fmt.Errorf("Non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
+		return fmt.Errorf("non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
 	}
 	return nil
 }
 
-func (v *MinValidator) ValidateValue0(parent *CValidator, name string, kind reflect.Kind, rv reflect.Value, index int) error {
-	switch kind {
+func (v *MinValidator) ValidateValue0(parent *CValidator, name string,
+	kind reflect.Kind, rv reflect.Value, index int) error {
+	switch kind { //nolint:exhaustive
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64: //  int
 		if rv.Int() < v.limit {
 			parent.appendValidatingError(v.Name(), name, index)
@@ -92,13 +95,14 @@ func (v *MinValidator) ValidateValue0(parent *CValidator, name string, kind refl
 			parent.appendValidatingError(v.Name(), name, index)
 		}
 	default:
-		return fmt.Errorf("Non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
+		return fmt.Errorf("non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
 	}
 	return nil
 }
 
-func (v *MaxValidator) ValidateValue0(parent *CValidator, name string, kind reflect.Kind, rv reflect.Value, index int) error {
-	switch kind {
+func (v *MaxValidator) ValidateValue0(parent *CValidator, name string,
+	kind reflect.Kind, rv reflect.Value, index int) error {
+	switch kind { //nolint:exhaustive
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64: //  int
 		if rv.Int() > v.limit {
 			parent.appendValidatingError(v.Name(), name, index)
@@ -114,20 +118,21 @@ func (v *MaxValidator) ValidateValue0(parent *CValidator, name string, kind refl
 			parent.appendValidatingError(v.Name(), name, index)
 		}
 	default:
-		return fmt.Errorf("Non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
+		return fmt.Errorf("non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
 	}
 	return nil
 }
 
-func (v *RegexpValidator) ValidateValue0(parent *CValidator, name string, kind reflect.Kind, rv reflect.Value, index int) error {
-	switch kind {
+func (v *RegexpValidator) ValidateValue0(parent *CValidator, name string,
+	kind reflect.Kind, rv reflect.Value, index int) error {
+	switch kind { //nolint:exhaustive
 	case reflect.String:
 		if !v.re.MatchString(rv.String()) {
 			parent.appendValidatingError(v.Name(), name, index)
 		}
 
 	default:
-		return fmt.Errorf("Non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
+		return fmt.Errorf("non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
 	}
 	return nil
 }
@@ -136,7 +141,7 @@ func (v *InValidator) toInts() (ret []int, err error) {
 	for _, value := range v.enabled {
 		i, err := strconv.Atoi(value)
 		if err != nil {
-			return nil, fmt.Errorf("invalid integer value %s for in value in rule 'in' %v", value, err)
+			return nil, fmt.Errorf("invalid integer value %s for in value in rule 'in' %w", value, err)
 		}
 		ret = append(ret, i)
 	}
@@ -148,7 +153,7 @@ func (v *InValidator) toFloats() (ret []float64, err error) {
 	for _, value := range v.enabled {
 		f, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return nil, fmt.Errorf("invalid integer value %s for in value in rule 'in' %v", value, err)
+			return nil, fmt.Errorf("invalid integer value %s for in value in rule 'in' %w", value, err)
 		}
 		ret = append(ret, f)
 	}
@@ -156,8 +161,9 @@ func (v *InValidator) toFloats() (ret []float64, err error) {
 	return ret, err
 }
 
-func (v *InValidator) ValidateValue0(parent *CValidator, name string, kind reflect.Kind, rv reflect.Value, index int) error {
-	switch kind {
+func (v *InValidator) ValidateValue0(parent *CValidator, name string,
+	kind reflect.Kind, rv reflect.Value, index int) error {
+	switch kind { //nolint:exhaustive
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64: //  int
 		if v.errEnabledInt != nil {
 			return v.errEnabledInt
@@ -194,7 +200,7 @@ func (v *InValidator) ValidateValue0(parent *CValidator, name string, kind refle
 			}
 		}
 	default:
-		return fmt.Errorf("Non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
+		return fmt.Errorf("non unsupported type '%s' by rule '%s'", kind.String(), v.Name())
 	}
 	parent.appendValidatingError(v.Name(), name, index)
 	return nil
@@ -216,13 +222,13 @@ func CreateRule(name string, value string) (RuleValidator, error) {
 		break
 	}
 
-	return nil, fmt.Errorf("Wrong rule '%s'", name)
+	return nil, fmt.Errorf("wrong rule '%s'", name)
 }
 
 func createRuleLen(value string) (RuleValidator, error) {
 	limit, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("An invalid value in the rule 'len': %v", err)
+		return nil, fmt.Errorf("an invalid value in the rule 'len': %w", err)
 	}
 
 	return &LenValidator{
@@ -232,7 +238,7 @@ func createRuleLen(value string) (RuleValidator, error) {
 func createRuleMin(value string) (RuleValidator, error) {
 	limit, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("An invalid value in the rule 'min': %v", err)
+		return nil, fmt.Errorf("an invalid value in the rule 'min': %w", err)
 	}
 
 	return &MinValidator{
@@ -242,7 +248,7 @@ func createRuleMin(value string) (RuleValidator, error) {
 func createRuleMax(value string) (RuleValidator, error) {
 	limit, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("An invalid value in the rule 'max': %v", err)
+		return nil, fmt.Errorf("an invalid value in the rule 'max': %w", err)
 	}
 
 	return &MaxValidator{
@@ -253,7 +259,7 @@ func createRuleRegexp(value string) (RuleValidator, error) {
 	// regex.Compile()
 	re, err := regexp.Compile(value) // возвращает ошибку
 	if err != nil {
-		return nil, fmt.Errorf("An invalid value in the rule 'regexp': %v", err)
+		return nil, fmt.Errorf("an invalid value in the rule 'regexp': %w", err)
 	}
 
 	return &RegexpValidator{
