@@ -278,6 +278,31 @@ func TTestMinValidatorValidateValue0[T LimitValidatableNumericalTypes](t *testin
 	}
 }
 
+// generic test function depended on type.
+func TTestMinValidatorValidateValue0NegativeLimit[T LimitValidatableNumericalTypes](t *testing.T) {
+	t.Helper()
+
+	t0, _ := createRuleMin("-42")
+	type User = TUser[T]
+
+	// successful validating of unsigned int
+	{
+		user := User{Age: 43}
+
+		rt := reflect.TypeOf(user)
+		rv := reflect.ValueOf(user.Age)
+
+		validator := &CValidator{ //  CValidator with only necessary fields
+			rv: rv,
+			rt: rt,
+		}
+
+		err1 := t0.ValidateValue0(validator, "Age", rv.Type().Kind(), rv, -1)
+		assert.NoError(t, err1)
+		assert.Equal(t, 0, len(validator.vErrors))
+	}
+}
+
 func Test_MinValidator_ValidateValue0_Int(t *testing.T) {
 	TTestMinValidatorValidateValue0[int](t)
 	TTestMinValidatorValidateValue0[int8](t)
@@ -291,6 +316,12 @@ func Test_MinValidator_ValidateValue0_Int(t *testing.T) {
 	TTestMinValidatorValidateValue0[uint64](t)
 	TTestMinValidatorValidateValue0[float32](t)
 	TTestMinValidatorValidateValue0[float64](t)
+
+	TTestMinValidatorValidateValue0NegativeLimit[uint](t)
+	TTestMinValidatorValidateValue0NegativeLimit[uint8](t)
+	TTestMinValidatorValidateValue0NegativeLimit[uint16](t)
+	TTestMinValidatorValidateValue0NegativeLimit[uint32](t)
+	TTestMinValidatorValidateValue0NegativeLimit[uint64](t)
 }
 
 /*........... MaxValidator ...........*/
@@ -373,6 +404,34 @@ func TTestMaxValidatorValidateValue0[T LimitValidatableNumericalTypes](t *testin
 	}
 }
 
+// generic test function depended on type.
+func TTestMaxValidatorValidateValue0NegativeLimit[T LimitValidatableNumericalTypes](t *testing.T) {
+	t.Helper()
+
+	t0, _ := createRuleMax("-42")
+	type User = TUser[T]
+
+	// unsuccessful validating of unsigned int
+	{
+		user := User{Age: 43}
+
+		rt := reflect.TypeOf(user)
+		rv := reflect.ValueOf(user.Age)
+
+		validator := &CValidator{ //  CValidator with only necessary fields
+			rv: rv,
+			rt: rt,
+		}
+
+		err1 := t0.ValidateValue0(validator, "Age", rv.Type().Kind(), rv, -1)
+		assert.NoError(t, err1)
+		assert.Equal(t, 1, len(validator.vErrors))
+		expectedText := fmt.Sprintf("validating error of member 'Age' of struct '%s' by rule 'max'", rt.Name())
+		assert.Equal(t, expectedText, validator.vErrors[0].Err.Error())
+	}
+}
+
+
 func Test_MaxValidator_ValidateValue0_Int(t *testing.T) {
 	TTestMaxValidatorValidateValue0[int](t)
 	TTestMaxValidatorValidateValue0[int8](t)
@@ -386,6 +445,11 @@ func Test_MaxValidator_ValidateValue0_Int(t *testing.T) {
 	TTestMaxValidatorValidateValue0[uint64](t)
 	TTestMaxValidatorValidateValue0[float32](t)
 	TTestMaxValidatorValidateValue0[float64](t)
+  TTestMaxValidatorValidateValue0NegativeLimit[uint](t)
+	TTestMaxValidatorValidateValue0NegativeLimit[uint8](t)
+	TTestMaxValidatorValidateValue0NegativeLimit[uint16](t)
+	TTestMaxValidatorValidateValue0NegativeLimit[uint32](t)
+	TTestMaxValidatorValidateValue0NegativeLimit[uint64](t)
 }
 
 /*........... RegexpValidator ...........*/
@@ -554,6 +618,28 @@ func TTestInValidatorValidateValue0[T LimitValidatableNumericalTypes](t *testing
 		assert.Error(t, err1)
 		expectedText := "non unsupported type 'struct' by rule 'in'"
 		assert.Equal(t, expectedText, err1.Error())
+	}
+
+	t1, _ := createRuleIn("-41,43")
+	{
+		// unsuccessful validating of unsigned int by list of negative values
+		{
+			user := User{Age: 41}
+
+			rt := reflect.TypeOf(user)
+			rv := reflect.ValueOf(user.Age)
+
+			validator := &CValidator{ //  CValidator with only necessary fields
+				rv: rv,
+				rt: rt,
+			}
+
+			err1 := t1.ValidateValue0(validator, "Age", rv.Type().Kind(), rv, -1)
+			assert.NoError(t, err1)
+			assert.Equal(t, 1, len(validator.vErrors))
+			expectedText := fmt.Sprintf("validating error of member 'Age' of struct '%s' by rule 'in'", rt.Name())
+			assert.Equal(t, expectedText, validator.vErrors[0].Err.Error())
+		}
 	}
 }
 

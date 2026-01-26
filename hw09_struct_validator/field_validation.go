@@ -86,6 +86,9 @@ func (v *MinValidator) ValidateValue0(parent *CValidator, name string,
 		}
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64: // uint
+		if v.limit < 0 { // if limit < 0 any unsigned >= 0 for sure
+			break
+		}
 		if rv.Uint() < uint64(v.limit) {
 			parent.appendValidatingError(v.Name(), name, index)
 		}
@@ -109,7 +112,8 @@ func (v *MaxValidator) ValidateValue0(parent *CValidator, name string,
 		}
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64: // uint
-		if rv.Uint() > uint64(v.limit) {
+		// if limit < 0 any unsigned can't be < limit for sure
+		if v.limit < 0 || rv.Uint() > uint64(v.limit) {
 			parent.appendValidatingError(v.Name(), name, index)
 		}
 
@@ -179,6 +183,9 @@ func (v *InValidator) ValidateValue0(parent *CValidator, name string,
 			return v.errEnabledInt
 		}
 		for _, e := range v.enabledInt {
+			if e < 0 { // if limit < 0 any unsigned cant be equal to it for sure
+				continue
+			}
 			if rv.Uint() == uint64(e) {
 				return nil
 			}
