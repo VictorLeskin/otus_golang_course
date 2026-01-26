@@ -64,7 +64,8 @@ type InValidator struct {
 }
 
 func (v *LenValidator) ValidateValue0(parent *CValidator, name string,
-	kind reflect.Kind, rv reflect.Value, index int) error {
+	kind reflect.Kind, rv reflect.Value, index int,
+) error {
 	switch kind { //nolint:exhaustive
 	case reflect.String:
 		if len(rv.String()) != v.limit {
@@ -78,7 +79,8 @@ func (v *LenValidator) ValidateValue0(parent *CValidator, name string,
 }
 
 func (v *MinValidator) ValidateValue0(parent *CValidator, name string,
-	kind reflect.Kind, rv reflect.Value, index int) error {
+	kind reflect.Kind, rv reflect.Value, index int,
+) error {
 	switch kind { //nolint:exhaustive
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64: //  int
 		if rv.Int() < v.limit {
@@ -104,7 +106,8 @@ func (v *MinValidator) ValidateValue0(parent *CValidator, name string,
 }
 
 func (v *MaxValidator) ValidateValue0(parent *CValidator, name string,
-	kind reflect.Kind, rv reflect.Value, index int) error {
+	kind reflect.Kind, rv reflect.Value, index int,
+) error {
 	switch kind { //nolint:exhaustive
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64: //  int
 		if rv.Int() > v.limit {
@@ -128,7 +131,8 @@ func (v *MaxValidator) ValidateValue0(parent *CValidator, name string,
 }
 
 func (v *RegexpValidator) ValidateValue0(parent *CValidator, name string,
-	kind reflect.Kind, rv reflect.Value, index int) error {
+	kind reflect.Kind, rv reflect.Value, index int,
+) error {
 	switch kind { //nolint:exhaustive
 	case reflect.String:
 		if !v.re.MatchString(rv.String()) {
@@ -166,7 +170,8 @@ func (v *InValidator) toFloats() (ret []float64, err error) {
 }
 
 func (v *InValidator) ValidateValue0(parent *CValidator, name string,
-	kind reflect.Kind, rv reflect.Value, index int) error {
+	kind reflect.Kind, rv reflect.Value, index int,
+) error {
 	switch kind { //nolint:exhaustive
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64: //  int
 		if v.errEnabledInt != nil {
@@ -239,7 +244,8 @@ func createRuleLen(value string) (RuleValidator, error) {
 	}
 
 	return &LenValidator{
-		limit: limit}, nil
+		limit: limit,
+	}, nil
 }
 
 func createRuleMin(value string) (RuleValidator, error) {
@@ -249,7 +255,8 @@ func createRuleMin(value string) (RuleValidator, error) {
 	}
 
 	return &MinValidator{
-		limit: int64(limit)}, nil
+		limit: int64(limit),
+	}, nil
 }
 
 func createRuleMax(value string) (RuleValidator, error) {
@@ -259,7 +266,8 @@ func createRuleMax(value string) (RuleValidator, error) {
 	}
 
 	return &MaxValidator{
-		limit: int64(limit)}, nil
+		limit: int64(limit),
+	}, nil
 }
 
 func createRuleRegexp(value string) (RuleValidator, error) {
@@ -270,12 +278,14 @@ func createRuleRegexp(value string) (RuleValidator, error) {
 	}
 
 	return &RegexpValidator{
-		s: value, re: *re}, nil
+		s: value, re: *re,
+	}, nil
 }
 
 func createRuleIn(value string) (RuleValidator, error) {
 	ret := &InValidator{
-		enabled: strings.Split(value, ",")}
+		enabled: strings.Split(value, ","),
+	}
 	ret.enabledInt, ret.errEnabledInt = ret.toInts()
 	ret.enabledFlt, ret.errEnabledFlt = ret.toFloats()
 

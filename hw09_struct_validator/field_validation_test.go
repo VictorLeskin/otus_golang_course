@@ -431,7 +431,6 @@ func TTestMaxValidatorValidateValue0NegativeLimit[T LimitValidatableNumericalTyp
 	}
 }
 
-
 func Test_MaxValidator_ValidateValue0_Int(t *testing.T) {
 	TTestMaxValidatorValidateValue0[int](t)
 	TTestMaxValidatorValidateValue0[int8](t)
@@ -445,7 +444,7 @@ func Test_MaxValidator_ValidateValue0_Int(t *testing.T) {
 	TTestMaxValidatorValidateValue0[uint64](t)
 	TTestMaxValidatorValidateValue0[float32](t)
 	TTestMaxValidatorValidateValue0[float64](t)
-  TTestMaxValidatorValidateValue0NegativeLimit[uint](t)
+	TTestMaxValidatorValidateValue0NegativeLimit[uint](t)
 	TTestMaxValidatorValidateValue0NegativeLimit[uint8](t)
 	TTestMaxValidatorValidateValue0NegativeLimit[uint16](t)
 	TTestMaxValidatorValidateValue0NegativeLimit[uint32](t)
