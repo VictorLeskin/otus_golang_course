@@ -47,6 +47,40 @@ func getUsers(r io.Reader) (result users, err error) {
 	return
 }
 
+func Match(domain *string, email *string) (matched bool, err error) {
+	return regexp.Match("\\."+*domain, []byte(*email))
+}
+
+func MatchS(domain *string, email *string) (matched bool) {
+	d := *domain
+	e := *email
+
+	// domain should end at "."" + domain.
+	if len(e) <= len(d) {
+		return false
+	}
+
+	// comapre tails of doman and email.
+	if e[len(e)-len(d):] != d {
+		return false
+	}
+
+	// check "."" before domain.
+	return e[len(e)-len(d)-1] == '.'
+}
+
+func updateDomainStat(email string, domainStat *DomainStat) {
+	num := (*domainStat)[strings.ToLower(strings.SplitN(email, "@", 2)[1])]
+	num++
+	(*domainStat)[strings.ToLower(strings.SplitN(email, "@", 2)[1])] = num
+}
+
+func updateDomainStat1(email string, domainStat *DomainStat) {
+	pos := strings.LastIndexByte(email, '@')
+	key := strings.ToLower(email[pos+1:])
+	(*domainStat)[key]++
+}
+
 func countDomains(u users, domain string) (DomainStat, error) {
 	result := make(DomainStat)
 
