@@ -30,6 +30,10 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 
 type users [100_000]User
 
+func Unmarshal(line string, user *User) error {
+	return json.Unmarshal([]byte(line), &user)
+}
+
 func getUsers(r io.Reader) (result users, err error) {
 	content, err := io.ReadAll(r)
 	if err != nil {
@@ -39,7 +43,7 @@ func getUsers(r io.Reader) (result users, err error) {
 	lines := strings.Split(string(content), "\n")
 	for i, line := range lines {
 		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
+		if err = Unmarshal(line, &user); err != nil {
 			return
 		}
 		result[i] = user
@@ -60,7 +64,7 @@ func MatchS(domain *string, email *string) (matched bool) {
 		return false
 	}
 
-	// comapre tails of doman and email.
+	// comapre tails of mail and doman
 	if e[len(e)-len(d):] != d {
 		return false
 	}
@@ -75,7 +79,7 @@ func updateDomainStat(email string, domainStat *DomainStat) {
 	(*domainStat)[strings.ToLower(strings.SplitN(email, "@", 2)[1])] = num
 }
 
-func updateDomainStat1(email string, domainStat *DomainStat) {
+func updateDomainStatS(email string, domainStat *DomainStat) {
 	pos := strings.LastIndexByte(email, '@')
 	key := strings.ToLower(email[pos+1:])
 	(*domainStat)[key]++
@@ -85,15 +89,10 @@ func countDomains(u users, domain string) (DomainStat, error) {
 	result := make(DomainStat)
 
 	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
-		if err != nil {
-			return nil, err
-		}
+		matched := MatchS(&domain, &user.Email)
 
 		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
+			updateDomainStatS(user.Email, &result)
 		}
 	}
 	return result, nil

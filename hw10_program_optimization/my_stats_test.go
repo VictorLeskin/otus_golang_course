@@ -142,14 +142,6 @@ func Benchmark_MatchS(b *testing.B) {
 	}
 }
 
-var emails_TestDomainStat []string = []string{
-	"aliquid_qui_ea@Browsedrive.gov",
-	"mLynch@broWsecat.com",
-	"RoseSmith@Browsecat.com",
-	"5Moore@Teklist.net",
-	"nulla@Linktype.com",
-}
-
 func Benchmark_updateDomainStat(b *testing.B) {
 	result := make(DomainStat)
 	emails := emails_TestDomainStat
@@ -163,14 +155,14 @@ func Benchmark_updateDomainStat(b *testing.B) {
 	}
 }
 
-func Benchmark_updateDomainStat1(b *testing.B) {
+func Benchmark_updateDomainStatS(b *testing.B) {
 	result := make(DomainStat)
 	emails := emails_TestDomainStat
 
 	for i := 0; i < b.N; i++ {
 		func() {
 			for _, email := range emails {
-				updateDomainStat1(email, &result)
+				updateDomainStatS(email, &result)
 			}
 		}()
 	}
