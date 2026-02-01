@@ -24,7 +24,7 @@ func Benchmark_GetDomainStat(b *testing.B) {
 	}
 }
 
-// go test -bench=Benchmark_GetDomainStat
+// go test -bench=Benchmark_GetDomainStat .
 func Benchmark_GetDomainStatMy(b *testing.B) {
 	r, err := zip.OpenReader("testdata/users.dat.zip")
 	require.NoError(b, err)
