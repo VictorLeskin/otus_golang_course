@@ -1,5 +1,12 @@
 package hw09structvalidator
 
+import (
+	"errors"
+	"fmt"
+	"reflect"
+	"strings"
+)
+
 type ValidationError struct {
 	Field string
 	Err   error
@@ -7,11 +14,107 @@ type ValidationError struct {
 
 type ValidationErrors []ValidationError
 
-func (v ValidationErrors) Error() string {
-	panic("implement me")
+func (v ValidationErrors) Error() (ret string) {
+	for _, s := range v {
+		ret = ret + s.Err.Error() + "\n"
+	}
+	return ret
 }
 
-func Validate(v interface{}) error {
-	// Place your code here.
+var ErrArgumentNotStructure = fmt.Errorf("argument is not a struct")
+
+var (
+	ErrExecution  = errors.New("execution error")
+	ErrValidation = errors.New("validation failed")
+)
+
+type CValidator struct {
+	in interface{}
+	rv reflect.Value // initial struct value and type
+	rt reflect.Type
+
+	vErrors ValidationErrors
+}
+
+func (v *CValidator) appendValidatingError(ruleName string, fieldName string, index int) {
+	var ve error
+	if index == -1 {
+		ve = fmt.Errorf("validating error of member '%s' of struct '%s' by rule '%s'",
+			fieldName, v.rt.Name(), ruleName)
+	} else {
+		ve = fmt.Errorf("validating error of member '%s[%d]' of struct '%s' by rule '%s'",
+			fieldName, index, v.rt.Name(), ruleName)
+	}
+
+	v.vErrors = append(v.vErrors, ValidationError{Field: fieldName, Err: ve})
+}
+
+func (v *CValidator) getRules(tag string) []string {
+	return strings.Split(tag, "|")
+}
+
+func (v *CValidator) createRules(tags []string) (ret []RuleValidator, err error) {
+	for _, t := range tags {
+		s := strings.Split(t, ":")
+		if rv, err := CreateRule(s[0], s[1]); err == nil {
+			ret = append(ret, rv)
+		} else {
+			return nil, err
+		}
+	}
+	return ret, err
+}
+
+func (v *CValidator) validateStruct() error {
+	if v.rt.Kind() == reflect.Struct {
+		for i := 0; i < v.rt.NumField(); i++ {
+			typeField := v.rt.Field(i)  // type info
+			valueField := v.rv.Field(i) // value info
+			if err := v.validateStructField(typeField, valueField); err != nil {
+				return err
+			}
+		}
+	} else {
+		return ErrArgumentNotStructure
+	}
+
 	return nil
+}
+
+func (v *CValidator) validateStructField(tf reflect.StructField, vf reflect.Value) error {
+	// get validate tag.
+	validateTag := tf.Tag.Get("validate")
+	if validateTag != "" {
+		// fmt.Printf("A validate tag of the field %s : %s\n", tf.Name, validateTag)
+		tags := v.getRules(validateTag)
+		rules, err := v.createRules(tags)
+		if err != nil {
+			return err
+		}
+		for _, r := range rules {
+			err = ValidateValue(r, v, tf, vf)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// else { // fmt.Printf("The field %s hasn't a validate tag\n", tf.Name)}
+	return nil
+}
+
+func Validate(i interface{}) error {
+	v := CValidator{in: i}
+
+	v.rv = reflect.ValueOf(v.in)
+	v.rt = v.rv.Type()
+
+	if err := v.validateStruct(); err != nil {
+		return fmt.Errorf("%w: %w", ErrExecution, err)
+	}
+
+	if len(v.vErrors) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("%w: %s", ErrValidation, v.vErrors.Error())
 }
