@@ -4,6 +4,7 @@ set HW=hw06_pipeline_execution
 set HW=hw07_file_copying
 set HW=hw08_envdir_tool
 set HW=hw10_program_optimization
+set HW=hw11_telnet_client
 
 git switch master
 pause
