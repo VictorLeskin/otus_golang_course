@@ -5,14 +5,15 @@ package hw10programoptimization
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 	"regexp"
 	"strings"
 
-	"github.com/mailru/easyjson"
+	// my package isn't main.
+	"github.com/mailru/easyjson" //nolint:depguard
 )
 
+//nolint:tagliatelle
 type User struct {
 	ID       int    `json:"Id"`
 	Name     string `json:"Name"`
@@ -23,28 +24,42 @@ type User struct {
 	Address  string `json:"Address"`
 }
 
-type DomainStat map[string]int
+type (
+	DomainStat map[string]int
+	users      [100_000]User
+	slusers    = []User //nolint:unused
+)
 
-func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	var u users
-	err := getUsers(r, &u)
-	if err != nil {
-		return nil, fmt.Errorf("get users error: %w", err)
+func GetDomainStat(r io.Reader, domain string) (domainStat DomainStat, err error) {
+	domainStat = make(DomainStat)
+	scanner := bufio.NewScanner(r)
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
+
+		var user User
+		if err = UnmarshalS(line, &user); err != nil {
+			return domainStat, err
+		}
+		matched := MatchS(&domain, &user.Email)
+
+		if matched {
+			updateDomainStatS(user.Email, &domainStat)
+		}
 	}
-	return countDomains(&u, domain)
+	return domainStat, nil
 }
-
-type users [100_000]User
 
 func Unmarshal(line string, user *User) error {
 	return json.Unmarshal([]byte(line), &user)
 }
 
-func UnmarshalS(line string, user *User) error {
-	return easyjson.Unmarshal([]byte(line), user)
+func UnmarshalS(line []byte, user *User) error {
+	return easyjson.Unmarshal(line, user)
 }
 
-func getUsers(r io.Reader, result *users) (err error) {
+//nolint:unused
+func getUsers(r io.Reader, result *slusers) (err error) {
 	scanner := bufio.NewScanner(r)
 
 	i := 0
@@ -52,10 +67,10 @@ func getUsers(r io.Reader, result *users) (err error) {
 		line := scanner.Text()
 
 		var user User
-		if err = UnmarshalS(line, &user); err != nil {
+		if err = UnmarshalS([]byte(line), &user); err != nil {
 			return
 		}
-		result[i] = user
+		*result = append(*result, user)
 		i++
 	}
 	return
@@ -66,23 +81,24 @@ func Match(domain *string, email *string) (matched bool, err error) {
 }
 
 func MatchS(domain *string, email *string) (matched bool) {
-	d := *domain
-	e := *email
+	lend := len(*domain)
+	lene := len(*email)
 
 	// domain should end at "."" + domain.
-	if len(e) <= len(d) {
+	if lene <= lend {
 		return false
 	}
 
-	// comapre tails of mail and doman
-	if e[len(e)-len(d):] != d {
+	// compare tails of mail and doman.
+	if (*email)[lene-lend:] != *domain {
 		return false
 	}
 
 	// check "."" before domain.
-	return e[len(e)-len(d)-1] == '.'
+	return (*email)[lene-lend-1] == '.'
 }
 
+//nolint:unused
 func updateDomainStat(email string, domainStat *DomainStat) {
 	num := (*domainStat)[strings.ToLower(strings.SplitN(email, "@", 2)[1])]
 	num++
@@ -95,15 +111,17 @@ func updateDomainStatS(email string, domainStat *DomainStat) {
 	(*domainStat)[key]++
 }
 
-func countDomains(u *users, domain string) (DomainStat, error) {
-	result := make(DomainStat)
+//nolint:unused
+func countDomains(u *slusers, domain string) DomainStat {
+	domainStat := make(DomainStat)
 
-	for _, user := range u {
+	for _, user := range *u {
 		matched := MatchS(&domain, &user.Email)
 
 		if matched {
-			updateDomainStatS(user.Email, &result)
+			updateDomainStatS(user.Email, &domainStat)
 		}
 	}
-	return result, nil
+
+	return domainStat
 }

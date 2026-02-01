@@ -8,15 +8,15 @@ import (
 	"strings"
 )
 
-func original_GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := original_getUsers(r)
+func originalGetDomainStat(r io.Reader, domain string) (DomainStat, error) {
+	u, err := originalgetUsers(r)
 	if err != nil {
 		return nil, fmt.Errorf("get users error: %w", err)
 	}
-	return original_countDomains(u, domain)
+	return originalcountDomains(u, domain)
 }
 
-func original_getUsers(r io.Reader) (result users, err error) {
+func originalgetUsers(r io.Reader) (result users, err error) {
 	content, err := io.ReadAll(r)
 	if err != nil {
 		return
@@ -33,7 +33,7 @@ func original_getUsers(r io.Reader) (result users, err error) {
 	return
 }
 
-func original_countDomains(u users, domain string) (DomainStat, error) {
+func originalcountDomains(u users, domain string) (DomainStat, error) {
 	result := make(DomainStat)
 
 	for _, user := range u {

@@ -25,6 +25,14 @@ var data2 []string = []string{
 	`{"Id":5,"Name":"Janice Rose","Username":"KeithHart","Email":"nulla@Linktype.com","Phone":"146-91-01","Password":"acSBF5","Address":"Russell Trail 61"}`,
 }
 
+var emailsTestDomainStat = []string{
+	"aliquid_qui_ea@Browsedrive.gov",
+	"mLynch@broWsecat.com",
+	"RoseSmith@Browsecat.com",
+	"5Moore@Teklist.net",
+	"nulla@Linktype.com",
+}
+
 type MockReader struct {
 	err    error
 	readed int
@@ -52,12 +60,12 @@ func Test_getUsers(t *testing.T) {
 		readed: 0,
 		buffer: []byte(data1),
 	}
-	var u users
+	var u slusers
 	err := getUsers(reader, &u)
 
 	assert.Nil(t, err)
 
-	require.Less(t, 5, len(u))
+	require.Equal(t, 5, len(u))
 	assert.Equal(t, u[0].ID, 1)
 	assert.Equal(t, u[0].Name, "Howard Mendoza")
 	assert.Equal(t, u[0].Username, "0Oliver")
@@ -74,8 +82,6 @@ func Test_getUsers(t *testing.T) {
 	assert.Equal(t, u[4].Password, "acSBF5")
 	assert.Equal(t, u[4].Address, "Russell Trail 61")
 
-	assert.Equal(t, u[5].ID, 0)
-	assert.Equal(t, u[5].Email, "")
 }
 
 func Test_Match(t *testing.T) {
@@ -152,7 +158,7 @@ func Benchmark_MatchS(b *testing.B) {
 
 func Benchmark_updateDomainStat(b *testing.B) {
 	result := make(DomainStat)
-	emails := emails_TestDomainStat
+	emails := emailsTestDomainStat
 
 	for i := 0; i < b.N; i++ {
 		func() {
@@ -165,7 +171,7 @@ func Benchmark_updateDomainStat(b *testing.B) {
 
 func Benchmark_updateDomainStatS(b *testing.B) {
 	result := make(DomainStat)
-	emails := emails_TestDomainStat
+	emails := emailsTestDomainStat
 
 	for i := 0; i < b.N; i++ {
 		func() {
@@ -195,7 +201,7 @@ func Test_Unmarshal(t *testing.T) {
 func Test_UnmarshalS(t *testing.T) {
 	data := data2[0]
 	var user User
-	err := UnmarshalS(data, &user)
+	err := UnmarshalS([]byte(data), &user)
 
 	assert.Nil(t, err)
 	assert.Equal(t, user.ID, 1)
@@ -224,11 +230,11 @@ func Benchmark_UnmarshalS(b *testing.B) {
 	var user User
 	for i := 0; i < b.N; i++ {
 		func() {
-			UnmarshalS(data2[0], &user)
-			UnmarshalS(data2[1], &user)
-			UnmarshalS(data2[2], &user)
-			UnmarshalS(data2[3], &user)
-			UnmarshalS(data2[4], &user)
+			UnmarshalS([]byte(data2[0]), &user)
+			UnmarshalS([]byte(data2[1]), &user)
+			UnmarshalS([]byte(data2[2]), &user)
+			UnmarshalS([]byte(data2[3]), &user)
+			UnmarshalS([]byte(data2[4]), &user)
 		}()
 	}
 }
