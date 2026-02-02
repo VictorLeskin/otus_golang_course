@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"time"
 )
@@ -33,14 +34,16 @@ func SetupCommadLineParameters() {
 	flag.Usage = Usage
 }
 
-func ParseCommadLine() (ret CommanLineParameter, err error) {
-	flag.DurationVar(&ret.timeout, "timeout", 10*time.Second, "connection timeout")
-	flag.Parse()
+func parseCommadLine(args0 []string) (ret CommanLineParameter, err error) {
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+
+	fs.DurationVar(&ret.timeout, "timeout", 10*time.Second, "connection timeout")
+	fs.Parse(args0)
 
 	// ge host and port
-	args := flag.Args()
+	args := fs.Args()
 	if len(args) < 2 {
-		flag.Usage()
+		fs.Usage()
 		return ret, fmt.Errorf("Host and port are required")
 	}
 
@@ -61,6 +64,10 @@ func ParseCommadLine() (ret CommanLineParameter, err error) {
 	fmt.Printf("Timeout: %f\n", ret.timeout.Seconds())
 
 	return ret, nil
+}
+
+func ParseCommadLine() (ret CommanLineParameter, err error) {
+	return parseCommadLine(os.Args)
 }
 
 type TelnetClient interface {
