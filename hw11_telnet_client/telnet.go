@@ -34,10 +34,7 @@ func SetupCommadLineParameters() {
 }
 
 func ParseCommadLine() (ret CommanLineParameter, err error) {
-	flag.StringVar(&ret.host, "host", "", "server host (required)")
-	flag.IntVar(&ret.port, "port", -1, "server port (required)")
-	ret.timeout = *flag.Duration("timeout", 10*time.Second, "connection timeout")
-
+	flag.DurationVar(&ret.timeout, "timeout", 10*time.Second, "connection timeout")
 	flag.Parse()
 
 	// ge host and port
@@ -61,7 +58,7 @@ func ParseCommadLine() (ret CommanLineParameter, err error) {
 	// Check result
 	fmt.Printf("Host: %s\n", ret.host)
 	fmt.Printf("Port: %d\n", ret.port)
-	fmt.Printf("Timeout: %v\n", ret.timeout)
+	fmt.Printf("Timeout: %f\n", ret.timeout.Seconds())
 
 	return ret, nil
 }
