@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 )
@@ -18,12 +17,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	address := params.host + ":" + strconv.Itoa(params.port)
-	var in io.ReadCloser
-	var out io.Writer
+	client := NewMyTelnetClient(
+		params.host+":"+strconv.Itoa(params.port),
+		params.timeout)
 
-	tc := NewTelnetClient(address, params.timeout, in, out)
+	if err := client.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 
-	_ = tc
 	os.Exit(0)
 }
