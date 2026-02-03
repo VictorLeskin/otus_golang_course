@@ -83,7 +83,7 @@ func Test_parseCommadLine(t *testing.T) {
 		wantPort    int
 		wantTimeout time.Duration
 		wantErr     bool
-		wantErrStr  string // часть текста ошибки для проверки
+		wantErrStr  string // return error message
 	}{
 		{
 			name:        "valid IPv4 with default timeout",
@@ -118,7 +118,6 @@ func Test_parseCommadLine(t *testing.T) {
 			wantErr:     false,
 		},
 
-		// Тесты с ошибками
 		{
 			name:       "missing host and port",
 			args:       []string{},
@@ -173,7 +172,7 @@ func Test_parseCommadLine(t *testing.T) {
 			wantHost:    "192.168.1.1",
 			wantPort:    8080,
 			wantTimeout: 10 * time.Second,
-			wantErr:     false, // лишние аргументы игнорируются
+			wantErr:     false, // Extra arguments will be ignored
 		},
 		{
 			name:       "invalid timeout value",
