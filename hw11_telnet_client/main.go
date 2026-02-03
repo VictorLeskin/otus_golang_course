@@ -11,7 +11,7 @@ import (
 func main() {
 	SetupCommadLineParameters()
 
-	params, err := ParseCommadLine()
+	params, err := ParseCommandLine()
 	if err != nil {
 		fmt.Println(err.Error())
 		flag.Usage()

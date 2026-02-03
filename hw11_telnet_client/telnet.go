@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strconv"
 	"time"
@@ -34,7 +35,7 @@ func SetupCommadLineParameters() {
 	flag.Usage = Usage
 }
 
-func parseCommadLine(args0 []string) (ret CommanLineParameter, err error) {
+func parseCommandLine(args0 []string) (ret CommanLineParameter, err error) {
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 
 	fs.DurationVar(&ret.timeout, "timeout", 10*time.Second, "connection timeout")
@@ -49,13 +50,21 @@ func parseCommadLine(args0 []string) (ret CommanLineParameter, err error) {
 
 	ret.host = args[0]
 	if ret.host == "" {
-		return ret, errors.New("Missed host name")
+		return ret, errors.New("Missed host address")
+	}
+
+	if net.ParseIP(ret.host) == nil { // Не IP
+		return ret, errors.New("Wrong host address")
 	}
 
 	// Check port.
 	ret.port, err = strconv.Atoi(args[1])
 	if err != nil {
 		return ret, fmt.Errorf("Port must be a number\n")
+	}
+
+	if ret.port < 1 || ret.port > 65535 {
+		return ret, fmt.Errorf("Port number must be in range[1,65535]\n")
 	}
 
 	// Check result
@@ -66,8 +75,8 @@ func parseCommadLine(args0 []string) (ret CommanLineParameter, err error) {
 	return ret, nil
 }
 
-func ParseCommadLine() (ret CommanLineParameter, err error) {
-	return parseCommadLine(os.Args)
+func ParseCommandLine() (ret CommanLineParameter, err error) {
+	return parseCommandLine(os.Args)
 }
 
 type TelnetClient interface {
