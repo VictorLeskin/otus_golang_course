@@ -39,7 +39,10 @@ func parseCommandLine(args0 []string) (ret CommanLineParameter, err error) {
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 
 	fs.DurationVar(&ret.timeout, "timeout", 10*time.Second, "connection timeout")
-	fs.Parse(args0)
+	err = fs.Parse(args0)
+	if err != nil {
+		return ret, fmt.Errorf("Error parsing command line parameters:\n%s", err.Error())
+	}
 
 	// ge host and port
 	args := fs.Args()
@@ -60,11 +63,11 @@ func parseCommandLine(args0 []string) (ret CommanLineParameter, err error) {
 	// Check port.
 	ret.port, err = strconv.Atoi(args[1])
 	if err != nil {
-		return ret, fmt.Errorf("Port must be a number\n")
+		return ret, fmt.Errorf("Port must be a number")
 	}
 
 	if ret.port < 1 || ret.port > 65535 {
-		return ret, fmt.Errorf("Port number must be in range[1,65535]\n")
+		return ret, fmt.Errorf("Port number must be in range [1,65535]")
 	}
 
 	// Check result
