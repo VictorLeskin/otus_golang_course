@@ -78,6 +78,62 @@ func TestMyTelnetClient(t *testing.T) {
 	client.Close()
 }
 
+// MockReadCloser имитирует io.ReadCloser
+type MockReadCloser struct {
+	Data []byte
+	pos  int
+	mu   sync.Mutex
+}
+
+func NewMockReadCloser(data string) *MockReadCloser {
+	return &MockReadCloser{Data: []byte(data)}
+}
+
+func (m *MockReadCloser) Read(p []byte) (n int, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.pos >= len(m.Data) {
+		return 0, io.EOF
+	}
+
+	n = copy(p, m.Data[m.pos:])
+	m.pos += n
+	return n, nil
+}
+
+func (m *MockReadCloser) Close() error {
+	return nil
+}
+
+// MockWriter имитирует io.Writer и сохраняет записанные данные
+type MockWriter struct {
+	Buffer bytes.Buffer
+	mu     sync.Mutex
+}
+
+func NewMockWriter() *MockWriter {
+	return &MockWriter{}
+}
+
+func (m *MockWriter) Write(p []byte) (n int, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.Buffer.Write(p)
+}
+
+func (m *MockWriter) String() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.Buffer.String()
+}
+
+func (m *MockWriter) Reset() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.Buffer.Reset()
+}
+
 func TestTelnetClient_Connect(t *testing.T) {
 	// Создаем mock сервер
 	server := &MockTelnetServer{
