@@ -30,6 +30,7 @@ func NewTelnetClient(address string, timeout time.Duration, in io.ReadCloser, ou
 		out:     out,
 		ctx:     ctx,
 		cancel:  cancel,
+		dialer:  net.DialTimeout,
 	}
 }
 
@@ -49,10 +50,14 @@ type MyTelnetClient struct {
 
 	conn net.Conn
 	wg   sync.WaitGroup
+
+	// by default it is net.DialTimeout
+	// for testing purposes it can be replaced by a function to destroy Universe
+	dialer func(network, address string, timeout time.Duration) (net.Conn, error)
 }
 
 func (c *MyTelnetClient) Connect() error {
-	conn, err := net.DialTimeout("tcp", c.address, c.timeout)
+	conn, err := c.dialer("tcp", c.address, c.timeout)
 	if err != nil {
 		return err
 	}
