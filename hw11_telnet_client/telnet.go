@@ -74,15 +74,18 @@ func (c *MyTelnetClient) Send() error {
 			return nil
 		default:
 			text := scanner.Text()
-			_, err := fmt.Fprintf(c.conn, "%s\n", text)
+			_, err := c.conn.Write([]byte(text + "\n"))
 			if err != nil {
-				return err
+				return fmt.Errorf("send error: %w", err)
 			}
 		}
 	}
 
-	// Обработка Ctrl+D
-	fmt.Println("^D")
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("input scanner error: %w", err)
+	}
+
+	// Ctrl+D - завершение ввода
 	c.cancel()
 	return nil
 }
@@ -90,21 +93,43 @@ func (c *MyTelnetClient) Send() error {
 func (c *MyTelnetClient) Receive() error {
 	defer c.wg.Done()
 
+	// Устанавливаем неблокирующее чтение с коротким таймаутом
+	c.conn.SetReadDeadline(time.Time{}) // Сначала убираем таймаут
+
 	reader := bufio.NewReader(c.conn)
+	buf := make([]byte, 1024)
+
 	for {
 		select {
 		case <-c.ctx.Done():
 			return nil
 		default:
-			line, err := reader.ReadString('\n')
+			// Читаем данные
+			n, err := reader.Read(buf)
 			if err != nil {
 				if err == io.EOF {
+					// Сервер закрыл соединение
+					fmt.Println("Connection closed by server")
 					c.cancel()
 					return nil
 				}
-				return err
+
+				// Проверяем, не закрыто ли соединение
+				if netErr, ok := err.(net.Error); ok {
+					if netErr.Timeout() {
+						// Таймаут - продолжаем
+						continue
+					}
+				}
+
+				// Другая ошибка
+				return fmt.Errorf("receive error: %w", err)
 			}
-			fmt.Print(line)
+
+			if n > 0 {
+				// Выводим полученные данные
+				os.Stdout.Write(buf[:n])
+			}
 		}
 	}
 }
@@ -127,6 +152,10 @@ func (c *MyTelnetClient) Run() error {
 		<-sigCh
 		fmt.Println("\n^C")
 		c.cancel()
+		// Закрываем соединение немедленно
+		if c.conn != nil {
+			c.conn.Close()
+		}
 	}()
 
 	if err := c.Connect(); err != nil {
@@ -136,18 +165,29 @@ func (c *MyTelnetClient) Run() error {
 
 	c.wg.Add(2)
 
+	sendErrCh := make(chan error, 1)
+	receiveErrCh := make(chan error, 1)
+
 	go func() {
-		if err := c.Send(); err != nil {
-			fmt.Fprintf(os.Stderr, "Send error: %v\n", err)
-		}
+		sendErrCh <- c.Send()
 	}()
 
 	go func() {
-		if err := c.Receive(); err != nil {
-			fmt.Fprintf(os.Stderr, "Receive error: %v\n", err)
-		}
+		receiveErrCh <- c.Receive()
 	}()
 
-	c.wg.Wait()
+	// Ждем завершения обеих горутин
+	select {
+	case err := <-sendErrCh:
+		if err != nil && err != context.Canceled {
+			return fmt.Errorf("send error: %w", err)
+		}
+	case err := <-receiveErrCh:
+		if err != nil && err != context.Canceled {
+			return fmt.Errorf("receive error: %w", err)
+		}
+	case <-c.ctx.Done():
+	}
+
 	return nil
 }
