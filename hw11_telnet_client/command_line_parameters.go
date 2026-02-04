@@ -40,33 +40,33 @@ func parseCommandLine(args0 []string) (ret CommanLineParameter, err error) {
 	fs.DurationVar(&ret.timeout, "timeout", 10*time.Second, "connection timeout")
 	err = fs.Parse(args0)
 	if err != nil {
-		return ret, fmt.Errorf("Error parsing command line parameters:\n%s", err.Error())
+		return ret, fmt.Errorf("error parsing command line parameters:\n%s", err.Error())
 	}
 
 	// ge host and port
 	args := fs.Args()
 	if len(args) < 2 {
 		fs.Usage()
-		return ret, fmt.Errorf("Host and port are required")
+		return ret, fmt.Errorf("host and port are required")
 	}
 
 	ret.host = args[0]
 	if ret.host == "" {
-		return ret, errors.New("Missed host address")
+		return ret, errors.New("missed host address")
 	}
 
 	if net.ParseIP(ret.host) == nil { // Не IP
-		return ret, errors.New("Wrong host address")
+		return ret, errors.New("wrong host address")
 	}
 
 	// Check port.
 	ret.port, err = strconv.Atoi(args[1])
 	if err != nil {
-		return ret, fmt.Errorf("Port must be a number")
+		return ret, fmt.Errorf("port must be a number")
 	}
 
 	if ret.port < 1 || ret.port > 65535 {
-		return ret, fmt.Errorf("Port number must be in range [1,65535]")
+		return ret, fmt.Errorf("port number must be in range [1,65535]")
 	}
 
 	// Check result
