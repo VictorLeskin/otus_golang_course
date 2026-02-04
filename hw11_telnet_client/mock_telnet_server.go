@@ -5,8 +5,6 @@ import (
 	"io"
 	"net"
 	"strings"
-	"testing"
-	"time"
 )
 
 // MockTelnetServer создает тестовый telnet сервер
@@ -41,12 +39,12 @@ func (m *MockTelnetServer) Start() error {
 
 func (m *MockTelnetServer) handleConnection(conn net.Conn) {
 	defer conn.Close()
-	
+
 	// Отправляем приветствие
 	if m.Response != "" {
 		conn.Write([]byte(m.Response))
 	}
-	
+
 	// Читаем сообщения от клиента
 	buf := make([]byte, 1024)
 	for {
@@ -57,10 +55,10 @@ func (m *MockTelnetServer) handleConnection(conn net.Conn) {
 			}
 			return
 		}
-		
+
 		msg := strings.TrimSpace(string(buf[:n]))
 		m.Messages = append(m.Messages, msg)
-		
+
 		// Отправляем эхо-ответ
 		if m.Response != "" {
 			conn.Write([]byte(m.Response))
@@ -81,4 +79,4 @@ func (m *MockTelnetServer) GetLastMessage() string {
 		return ""
 	}
 	return m.Messages[len(m.Messages)-1]
-} 
+}

@@ -155,29 +155,17 @@ func (c *MyTelnetClient) Run() error {
 
 	c.wg.Add(2)
 
-	sendErrCh := make(chan error, 1)
-	receiveErrCh := make(chan error, 1)
-
+	// Запускаем горутины БЕЗ каналов для ошибок
 	go func() {
-		sendErrCh <- c.Send()
+		c.Send()
 	}()
 
 	go func() {
-		receiveErrCh <- c.Receive()
+		c.Receive()
 	}()
 
-	// Ждем завершения обеих горутин
-	select {
-	case err := <-sendErrCh:
-		if err != nil && err != context.Canceled {
-			return fmt.Errorf("send error: %w", err)
-		}
-	case err := <-receiveErrCh:
-		if err != nil && err != context.Canceled {
-			return fmt.Errorf("receive error: %w", err)
-		}
-	case <-c.ctx.Done():
-	}
+	// Просто ждем завершения WaitGroup
+	c.wg.Wait()
 
 	return nil
 }
