@@ -63,3 +63,18 @@ func TestTelnetClient(t *testing.T) {
 		wg.Wait()
 	})
 }
+
+func TestMyTelnetClient(t *testing.T) {
+	client := NewMyTelnetClient(
+		"74.125.29.102:80",
+		5*time.Second)
+
+	var cl TelnetClient
+
+	cl = client
+
+	cl.Connect()
+	cl.Send()
+	cl.Receive()
+	cl.Close()
+}

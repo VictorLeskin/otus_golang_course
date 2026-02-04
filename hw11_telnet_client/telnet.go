@@ -44,7 +44,7 @@ type MyTelnetClient struct {
 	wg      sync.WaitGroup
 }
 
-func NewMyTelnetClient(address string, timeout time.Duration) *MyTelnetClient {
+func NewMyTelnetClient(address string, timeout time.Duration) TelnetClient {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &MyTelnetClient{
 		address: address,
