@@ -26,6 +26,8 @@ func NewTelnetClient(address string, timeout time.Duration, in io.ReadCloser, ou
 	return &MyTelnetClient{
 		address: address,
 		timeout: timeout,
+		in:      in,
+		out:     out,
 		ctx:     ctx,
 		cancel:  cancel,
 	}
@@ -36,12 +38,17 @@ func NewTelnetClient(address string, timeout time.Duration, in io.ReadCloser, ou
 
 type MyTelnetClient struct {
 	TelnetClient
+
 	address string
 	timeout time.Duration
-	conn    net.Conn
-	ctx     context.Context
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
+	in      io.ReadCloser
+	out     io.Writer
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	conn net.Conn
+	wg   sync.WaitGroup
 }
 
 func (c *MyTelnetClient) Connect() error {
