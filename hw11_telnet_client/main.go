@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	SetupCommadLineParameters()
+	SetupCommandLineParameters()
 
 	params, err := ParseCommandLine()
 	if err != nil {
