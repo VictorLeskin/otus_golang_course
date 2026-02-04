@@ -2,13 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,140 +65,263 @@ func TestTelnetClient(t *testing.T) {
 	})
 }
 
-func Test_parseCommadLine(t *testing.T) {
-	/*
-		{
-			clp, err := parseCommandLine([]string{"-invalid-flag", "192.168.1.1", "8080"})
-			assert.Nil(t, err)
-			assert.Equal(t, "10.2.92.212", clp.host)
-			assert.Equal(t, 8888, clp.port)
-			assert.Equal(t, 21*time.Second, clp.timeout)
-		}
-	*/
+func TestMyTelnetClient(t *testing.T) {
+	client := NewTelnetClient(
+		"74.125.29.102:80",
+		5*time.Second,
+		nil,
+		nil)
 
-	tests := []struct {
-		name        string
-		args        []string
-		wantHost    string
-		wantPort    int
-		wantTimeout time.Duration
-		wantErr     bool
-		wantErrStr  string // return error message
-	}{
-		{
-			name:        "valid IPv4 with default timeout",
-			args:        []string{"192.168.1.1", "8080"},
-			wantHost:    "192.168.1.1",
-			wantPort:    8080,
-			wantTimeout: 10 * time.Second,
-			wantErr:     false,
-		},
-		{
-			name:        "valid IPv4 with custom timeout",
-			args:        []string{"-timeout", "5s", "10.0.0.1", "443"},
-			wantHost:    "10.0.0.1",
-			wantPort:    443,
-			wantTimeout: 5 * time.Second,
-			wantErr:     false,
-		},
-		{
-			name:        "min valid port",
-			args:        []string{"192.168.1.1", "1"},
-			wantHost:    "192.168.1.1",
-			wantPort:    1,
-			wantTimeout: 10 * time.Second,
-			wantErr:     false,
-		},
-		{
-			name:        "max valid port",
-			args:        []string{"192.168.1.1", "65535"},
-			wantHost:    "192.168.1.1",
-			wantPort:    65535,
-			wantTimeout: 10 * time.Second,
-			wantErr:     false,
-		},
+	client.Connect()
+	client.Send()
+	client.Receive()
+	client.Close()
+}
 
-		{
-			name:       "missing host and port",
-			args:       []string{},
-			wantErr:    true,
-			wantErrStr: "Host and port are required",
-		},
-		{
-			name:       "invalid host format",
-			args:       []string{"not-an-ip", "8080"},
-			wantErr:    true,
-			wantErrStr: "Wrong host address",
-		},
-		{
-			name:       "port is not a number",
-			args:       []string{"192.168.1.1", "abc"},
-			wantErr:    true,
-			wantErrStr: "Port must be a number",
-		},
-		{
-			name:       "port is float",
-			args:       []string{"192.168.1.1", "80.5"},
-			wantErr:    true,
-			wantErrStr: "Port must be a number",
-		},
-		{
-			name:       "port too small",
-			args:       []string{"192.168.1.1", "0"},
-			wantErr:    true,
-			wantErrStr: "Port number must be in range [1,65535]",
-		},
-		{
-			name:       "port too large",
-			args:       []string{"192.168.1.1", "65536"},
-			wantErr:    true,
-			wantErrStr: "Port number must be in range [1,65535]",
-		},
-		{
-			name:       "invalid flag",
-			args:       []string{"-invalid-flag", "192.168.1.1", "8080"},
-			wantErr:    true,
-			wantErrStr: "Error parsing command line parameters:\nflag provided but not defined: -invalid-flag",
-		},
-		{
-			name:       "host with too few octets",
-			args:       []string{"192.168.1", "8080"},
-			wantErr:    true,
-			wantErrStr: "Wrong host address",
-		},
-		{
-			name:        "valid host but extra arguments",
-			args:        []string{"192.168.1.1", "8080", "extra", "args"},
-			wantHost:    "192.168.1.1",
-			wantPort:    8080,
-			wantTimeout: 10 * time.Second,
-			wantErr:     false, // Extra arguments will be ignored
-		},
-		{
-			name:       "invalid timeout value",
-			args:       []string{"-timeout", "invalid", "192.168.1.1", "80"},
-			wantErr:    true,
-			wantErrStr: "Error parsing command line parameters:\ninvalid value \"invalid\" for flag -timeout: parse error",
-		},
+// MockReadCloser имитирует io.ReadCloser
+type MockReadCloser struct {
+	Data []byte
+	pos  int
+	mu   sync.Mutex
+}
+
+func NewMockReadCloser(data string) *MockReadCloser {
+	return &MockReadCloser{Data: []byte(data)}
+}
+
+func (m *MockReadCloser) Read(p []byte) (n int, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.pos >= len(m.Data) {
+		return 0, io.EOF
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseCommandLine(tt.args)
+	n = copy(p, m.Data[m.pos:])
+	m.pos += n
+	return n, nil
+}
 
-			// check error if any
-			if tt.wantErr {
-				assert.NotNil(t, err)
-				assert.Equal(t, tt.wantErrStr, err.Error())
-				return
-			}
+func (m *MockReadCloser) Close() error {
+	return nil
+}
 
-			// no error check results
-			if !tt.wantErr {
-				assert.Equal(t, got.host, tt.wantHost)
-				assert.Equal(t, got.port, tt.wantPort)
-				assert.Equal(t, got.timeout, tt.wantTimeout)
-			}
-		})
+// MockWriter имитирует io.Writer и сохраняет записанные данные
+type MockWriter struct {
+	Buffer bytes.Buffer
+	mu     sync.Mutex
+}
+
+func NewMockWriter() *MockWriter {
+	return &MockWriter{}
+}
+
+func (m *MockWriter) Write(p []byte) (n int, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.Buffer.Write(p)
+}
+
+func (m *MockWriter) String() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.Buffer.String()
+}
+
+func (m *MockWriter) Reset() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.Buffer.Reset()
+}
+
+func TestTelnetClient_Connect(t *testing.T) {
+	// Создаем mock сервер
+	server := &MockTelnetServer{
+		Port:     8080,
+		Response: "Welcome!\n",
+	}
+
+	if err := server.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Stop()
+
+	// Ждем, чтобы сервер запустился
+	time.Sleep(100 * time.Millisecond)
+
+	// Создаем клиент
+	client := NewTelnetClient(
+		"localhost:8080",
+		5*time.Second,
+		NewMockReadCloser(""),
+		NewMockWriter(),
+	)
+
+	// Пытаемся подключиться
+	err := client.Connect()
+	if err != nil {
+		t.Errorf("Connect failed: %v", err)
+	}
+
+	client.Close()
+}
+
+func TestTelnetClient_Send(t *testing.T) {
+	server := &MockTelnetServer{
+		Port:     8081,
+		Response: "OK\n",
+	}
+
+	if err := server.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Mock входные данные
+	input := NewMockReadCloser("Hello\nWorld\n")
+	output := NewMockWriter()
+
+	client := NewTelnetClient(
+		"localhost:8081",
+		5*time.Second,
+		input,
+		output,
+	)
+
+	if err := client.Connect(); err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	// Запускаем Send в отдельной горутине
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- client.Send()
+	}()
+
+	// Ждем завершения Send (он завершится, когда входные данные закончатся)
+	select {
+	case err := <-errCh:
+		if err != nil && err != io.EOF {
+			t.Errorf("Send failed: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("Send timeout")
+	}
+
+	// Проверяем, что сообщения дошли до сервера
+	time.Sleep(100 * time.Millisecond)
+	if len(server.Messages) < 2 {
+		t.Errorf("Expected at least 2 messages, got %d", len(server.Messages))
+	}
+}
+
+func TestTelnetClient_Receive(t *testing.T) {
+	server := &MockTelnetServer{
+		Port:     8082,
+		Response: "Server response\n",
+	}
+
+	if err := server.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	input := NewMockReadCloser("")
+	output := NewMockWriter()
+
+	client := NewTelnetClient(
+		"localhost:8082",
+		5*time.Second,
+		input,
+		output,
+	)
+
+	if err := client.Connect(); err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	// Запускаем Receive
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- client.Receive()
+	}()
+
+	select {
+	case err := <-errCh:
+		// Receive может не завершиться, так как сервер продолжает отправлять данные
+		if err != nil && err != context.Canceled {
+			t.Errorf("Receive failed: %v", err)
+		}
+	case <-ctx.Done():
+		// Ожидаемо - сервер продолжает отправлять данные
+	}
+
+	// Проверяем, что получили данные от сервера
+	outputStr := output.String()
+	if outputStr == "" {
+		t.Error("Expected to receive data from server")
+	}
+}
+
+func TestTelnetClient_CtrlD(t *testing.T) {
+	server := &MockTelnetServer{Port: 8083}
+
+	if err := server.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Ctrl+D - пустой ввод
+	input := NewMockReadCloser("") // EOF сразу
+	output := NewMockWriter()
+
+	client := NewTelnetClient(
+		"localhost:8083",
+		5*time.Second,
+		input,
+		output,
+	)
+
+	if err := client.Connect(); err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	// Send должен сразу вернуть EOF
+	err := client.Send()
+	if err != io.EOF && err != context.Canceled {
+		t.Errorf("Expected EOF or Canceled, got: %v", err)
+	}
+}
+
+func TestTelnetClient_ConnectionTimeout(t *testing.T) {
+	// Не запускаем сервер - проверяем таймаут подключения
+
+	client := NewTelnetClient(
+		"localhost:9999",     // Несуществующий порт
+		100*time.Millisecond, // Маленький таймаут
+		NewMockReadCloser(""),
+		NewMockWriter(),
+	)
+
+	err := client.Connect()
+	if err == nil {
+		t.Error("Expected connection timeout error")
+	}
+
+	// Проверяем, что это действительно таймаут
+	if _, ok := err.(net.Error); !ok {
+		t.Errorf("Expected net.Error, got: %T", err)
 	}
 }

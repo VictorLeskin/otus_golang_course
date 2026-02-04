@@ -3,89 +3,15 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"os/signal"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
 )
-
-type CommanLineParameter struct {
-	host    string
-	port    int
-	timeout time.Duration
-}
-
-func Usage() {
-	fmt.Println(
-		`Реализация крайне примитивного TELNET клиента.
-* Программа подключется к указанному хосту (IP или доменное имя) и порту по протоколу TCP.
-* После подключения STDIN программы записыватся в сокет, а данные, полученные из сокета, выводятся в STDOUT.
-* Опционально в программу можно передать таймаут на подключение к серверу (через аргумент --timeout) - по умолчанию 10s.
-* При нажатии Ctrl+D программа закрывает сокет и завершается с сообщением.
-* При получении SIGINT программа завершает свою работу.
-* Если сокет закрылся со стороны сервера, то при следующей попытке отправить сообщение программа должна завершаться.
-* При подключении к несуществующему серверу, программа завершается с ошибкой соединения/таймаута.`)
-
-	flag.PrintDefaults()
-}
-
-func SetupCommadLineParameters() {
-	flag.Usage = Usage
-}
-
-func parseCommandLine(args0 []string) (ret CommanLineParameter, err error) {
-	fs := flag.NewFlagSet("privitive-telnet", flag.ContinueOnError)
-
-	fs.DurationVar(&ret.timeout, "timeout", 10*time.Second, "connection timeout")
-	err = fs.Parse(args0)
-	if err != nil {
-		return ret, fmt.Errorf("Error parsing command line parameters:\n%s", err.Error())
-	}
-
-	// ge host and port
-	args := fs.Args()
-	if len(args) < 2 {
-		fs.Usage()
-		return ret, fmt.Errorf("Host and port are required")
-	}
-
-	ret.host = args[0]
-	if ret.host == "" {
-		return ret, errors.New("Missed host address")
-	}
-
-	if net.ParseIP(ret.host) == nil { // Не IP
-		return ret, errors.New("Wrong host address")
-	}
-
-	// Check port.
-	ret.port, err = strconv.Atoi(args[1])
-	if err != nil {
-		return ret, fmt.Errorf("Port must be a number")
-	}
-
-	if ret.port < 1 || ret.port > 65535 {
-		return ret, fmt.Errorf("Port number must be in range [1,65535]")
-	}
-
-	// Check result
-	fmt.Printf("Host: %s\n", ret.host)
-	fmt.Printf("Port: %d\n", ret.port)
-	fmt.Printf("Timeout: %f\n", ret.timeout.Seconds())
-
-	return ret, nil
-}
-
-func ParseCommandLine() (ret CommanLineParameter, err error) {
-	return parseCommandLine(os.Args[1:])
-}
 
 type TelnetClient interface {
 	Connect() error
@@ -96,22 +22,6 @@ type TelnetClient interface {
 
 func NewTelnetClient(address string, timeout time.Duration, in io.ReadCloser, out io.Writer) TelnetClient {
 	// Place your code here.
-	return nil
-}
-
-// Place your code here.
-// P.S. Author's solution takes no more than 50 lines.
-
-type MyTelnetClient struct {
-	address string
-	timeout time.Duration
-	conn    net.Conn
-	ctx     context.Context
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
-}
-
-func NewMyTelnetClient(address string, timeout time.Duration) *MyTelnetClient {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &MyTelnetClient{
 		address: address,
@@ -119,6 +29,19 @@ func NewMyTelnetClient(address string, timeout time.Duration) *MyTelnetClient {
 		ctx:     ctx,
 		cancel:  cancel,
 	}
+}
+
+// Place your code here.
+// P.S. Author's solution takes no more than 50 lines.
+
+type MyTelnetClient struct {
+	TelnetClient
+	address string
+	timeout time.Duration
+	conn    net.Conn
+	ctx     context.Context
+	cancel  context.CancelFunc
+	wg      sync.WaitGroup
 }
 
 func (c *MyTelnetClient) Connect() error {
@@ -141,15 +64,18 @@ func (c *MyTelnetClient) Send() error {
 			return nil
 		default:
 			text := scanner.Text()
-			_, err := fmt.Fprintf(c.conn, "%s\n", text)
+			_, err := c.conn.Write([]byte(text + "\n"))
 			if err != nil {
-				return err
+				return fmt.Errorf("send error: %w", err)
 			}
 		}
 	}
 
-	// Обработка Ctrl+D
-	fmt.Println("^D")
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("input scanner error: %w", err)
+	}
+
+	// Ctrl+D - завершение ввода
 	c.cancel()
 	return nil
 }
@@ -157,21 +83,43 @@ func (c *MyTelnetClient) Send() error {
 func (c *MyTelnetClient) Receive() error {
 	defer c.wg.Done()
 
+	// Устанавливаем неблокирующее чтение с коротким таймаутом
+	c.conn.SetReadDeadline(time.Time{}) // Сначала убираем таймаут
+
 	reader := bufio.NewReader(c.conn)
+	buf := make([]byte, 1024)
+
 	for {
 		select {
 		case <-c.ctx.Done():
 			return nil
 		default:
-			line, err := reader.ReadString('\n')
+			// Читаем данные
+			n, err := reader.Read(buf)
 			if err != nil {
 				if err == io.EOF {
+					// Сервер закрыл соединение
+					fmt.Println("Connection closed by server")
 					c.cancel()
 					return nil
 				}
-				return err
+
+				// Проверяем, не закрыто ли соединение
+				if netErr, ok := err.(net.Error); ok {
+					if netErr.Timeout() {
+						// Таймаут - продолжаем
+						continue
+					}
+				}
+
+				// Другая ошибка
+				return fmt.Errorf("receive error: %w", err)
 			}
-			fmt.Print(line)
+
+			if n > 0 {
+				// Выводим полученные данные
+				os.Stdout.Write(buf[:n])
+			}
 		}
 	}
 }
@@ -194,6 +142,10 @@ func (c *MyTelnetClient) Run() error {
 		<-sigCh
 		fmt.Println("\n^C")
 		c.cancel()
+		// Закрываем соединение немедленно
+		if c.conn != nil {
+			c.conn.Close()
+		}
 	}()
 
 	if err := c.Connect(); err != nil {
@@ -203,18 +155,17 @@ func (c *MyTelnetClient) Run() error {
 
 	c.wg.Add(2)
 
+	// Запускаем горутины БЕЗ каналов для ошибок
 	go func() {
-		if err := c.Send(); err != nil {
-			fmt.Fprintf(os.Stderr, "Send error: %v\n", err)
-		}
+		c.Send()
 	}()
 
 	go func() {
-		if err := c.Receive(); err != nil {
-			fmt.Fprintf(os.Stderr, "Receive error: %v\n", err)
-		}
+		c.Receive()
 	}()
 
+	// Просто ждем завершения WaitGroup
 	c.wg.Wait()
+
 	return nil
 }

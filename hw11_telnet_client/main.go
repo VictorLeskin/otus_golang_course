@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	SetupCommadLineParameters()
+	SetupCommandLineParameters()
 
 	params, err := ParseCommandLine()
 	if err != nil {
@@ -17,13 +17,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	client := NewMyTelnetClient(
+	client := NewTelnetClient(
 		params.host+":"+strconv.Itoa(params.port),
-		params.timeout)
+		params.timeout,
+		nil,
+		nil)
 
-	if err := client.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+	if c, ok := client.(*MyTelnetClient); ok {
+		if err := c.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	os.Exit(0)
