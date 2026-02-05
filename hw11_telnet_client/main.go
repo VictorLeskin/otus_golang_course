@@ -20,8 +20,8 @@ func main() {
 	client := NewTelnetClient(
 		params.host+":"+strconv.Itoa(params.port),
 		params.timeout,
-		nil,
-		nil)
+		os.Stdin,
+		os.Stdin)
 
 	if c, ok := client.(*MyTelnetClient); ok {
 		if err := c.Run(); err != nil {
