@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // MockReadCloser имитирует io.ReadCloser
@@ -23,9 +24,16 @@ func (m *MockReadCloser1) Read(p []byte) (n int, err error) {
 		return 0, fmt.Errorf("stream had closed")
 	}
 	if m.pos < len(m.Data) {
-		p = []byte(m.Data[m.pos])
+		if len(m.Data[m.pos]) > len(p) {
+			panic("input buffer too smal")
+		}
+		copy(p, []byte(m.Data[m.pos]))
 		m.pos++
-		return len(p), nil
+		if m.pos == len(m.Data) {
+			return len(p), io.EOF
+		} else {
+			return len(p), nil
+		}
 	}
 
 	return 0, io.EOF
@@ -54,13 +62,15 @@ func (m *MockWriter1) Free() (ret string) {
 
 type MockConn struct {
 	net.Conn
+	writeBuffer string
 }
 
-func (c MockConn) Read(b []byte) (n int, err error) {
+func (c *MockConn) Read(b []byte) (n int, err error) {
 	return 0, nil
 }
 
-func (c MockConn) Write(b []byte) (n int, err error) {
+func (c *MockConn) Write(b []byte) (n int, err error) {
+	c.writeBuffer += string(b)
 	return 0, nil
 }
 
@@ -89,7 +99,7 @@ func MyDialTimeout(network, address string, timeout time.Duration) (net.Conn, er
 		return nil, fmt.Errorf("timeout error")
 	}
 
-	return myDialer.mockConn, myDialer.err
+	return &myDialer.mockConn, myDialer.err
 }
 
 func Test_MockReadCloser1_Ctor(t *testing.T) {
@@ -183,6 +193,37 @@ func Test_MyTelnetClient_Connect(t *testing.T) {
 		assert.Equal(t, "1.2.3.4:5", myDialer.address)
 		assert.Equal(t, 1*time.Second, myDialer.timeout)
 		assert.Nil(t, t0.conn)
+	})
+
+}
+
+func Test_MyTelnetClient_Send(t *testing.T) {
+	t.Run("sending is ok", func(t *testing.T) {
+		r := MockReadCloser1{
+			Data: []string{"Welcome!\n"},
+		}
+		myDialer = MyDialer{}
+
+		tc := NewTelnetClient("1.2.3.4:5", 1*time.Second, &r, nil)
+
+		t0, ok := tc.(*MyTelnetClient)
+		require.True(t, ok)
+		t0.dialer = MyDialTimeout
+		t0.wg.Add(1)
+
+		assert.Nil(t, t0.conn)
+		err0 := t0.Connect()
+		assert.Nil(t, err0)
+		require.NotNil(t, t0.conn)
+
+		err := t0.Send()
+
+		assert.Nil(t, err)
+		assert.Equal(t, "tcp", myDialer.network)
+		assert.Equal(t, "1.2.3.4:5", myDialer.address)
+		assert.Equal(t, 1*time.Second, myDialer.timeout)
+		assert.NotNil(t, t0.conn)
+		assert.Equal(t, "Welcome!", myDialer.mockConn.writeBuffer)
 	})
 
 }

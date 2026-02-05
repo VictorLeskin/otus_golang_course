@@ -69,7 +69,7 @@ func (c *MyTelnetClient) Connect() error {
 func (c *MyTelnetClient) Send() error {
 	defer c.wg.Done()
 
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(c.in)
 	for scanner.Scan() {
 		select {
 		case <-c.ctx.Done():
