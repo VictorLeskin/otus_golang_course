@@ -51,8 +51,8 @@ type MyTelnetClient struct {
 	conn net.Conn
 	wg   sync.WaitGroup
 
-	// by default it is net.DialTimeout
-	// for testing purposes it can be replaced by a function to destroy Universe
+	// by default it is net.DialTimeout.
+	// for testing purposes it can be replaced by a function to destroy Universe.
 	dialer func(network, address string, timeout time.Duration) (net.Conn, error)
 }
 
@@ -87,7 +87,7 @@ func (c *MyTelnetClient) Send() error {
 		return fmt.Errorf("input scanner error: %w", err)
 	}
 
-	// Ctrl+D - завершение ввода
+	// Ctrl+D - end of input.
 	c.cancel()
 	return nil
 }
@@ -95,8 +95,8 @@ func (c *MyTelnetClient) Send() error {
 func (c *MyTelnetClient) Receive() error {
 	defer c.wg.Done()
 
-	// Устанавливаем неблокирующее чтение с коротким таймаутом
-	c.conn.SetReadDeadline(time.Time{}) // Сначала убираем таймаут
+	// nonblocking reading.
+	c.conn.SetReadDeadline(time.Time{}) // remove timeout.
 
 	reader := bufio.NewReader(c.conn)
 	buf := make([]byte, 1024)
@@ -106,31 +106,19 @@ func (c *MyTelnetClient) Receive() error {
 		case <-c.ctx.Done():
 			return nil
 		default:
-			// Читаем данные
 			n, err := reader.Read(buf)
 			if err != nil {
+				c.cancel()
 				if err == io.EOF {
-					// Сервер закрыл соединение
 					fmt.Println("Connection closed by server")
-					c.cancel()
 					return nil
 				}
-
-				// Проверяем, не закрыто ли соединение
-				if netErr, ok := err.(net.Error); ok {
-					if netErr.Timeout() {
-						// Таймаут - продолжаем
-						continue
-					}
-				}
-
-				// Другая ошибка
-				return fmt.Errorf("receive error: %w", err)
+				return fmt.Errorf("server send error: %w", err)
 			}
 
 			if n > 0 {
-				// Выводим полученные данные
-				os.Stdout.Write(buf[:n])
+				// Output received data.
+				c.out.Write(buf[:n])
 			}
 		}
 	}
@@ -146,7 +134,7 @@ func (c *MyTelnetClient) Close() error {
 }
 
 func (c *MyTelnetClient) Run() error {
-	// Обработка Ctrl+C
+	// add processsing Ctrl+C.
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
@@ -154,7 +142,7 @@ func (c *MyTelnetClient) Run() error {
 		<-sigCh
 		fmt.Println("\n^C")
 		c.cancel()
-		// Закрываем соединение немедленно
+		// close immediately.
 		if c.conn != nil {
 			c.conn.Close()
 		}
@@ -167,7 +155,7 @@ func (c *MyTelnetClient) Run() error {
 
 	c.wg.Add(2)
 
-	// Запускаем горутины БЕЗ каналов для ошибок
+	// start goroutines.
 	go func() {
 		c.Send()
 	}()
@@ -176,7 +164,7 @@ func (c *MyTelnetClient) Run() error {
 		c.Receive()
 	}()
 
-	// Просто ждем завершения WaitGroup
+	// end finishing WaitGroup.
 	c.wg.Wait()
 
 	return nil
