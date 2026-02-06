@@ -1,13 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"strings"
 )
 
-// MockTelnetServer создает тестовый telnet сервер
+// MockTelnetServer created test telnet server.
 type MockTelnetServer struct {
 	Port     int
 	Response string
@@ -15,7 +16,7 @@ type MockTelnetServer struct {
 	listener net.Listener
 }
 
-// Start запускает mock сервер
+// Start mock server.
 func (m *MockTelnetServer) Start() error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", m.Port))
 	if err != nil {
@@ -28,7 +29,7 @@ func (m *MockTelnetServer) Start() error {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				return // Сервер остановлен
+				return // server stop
 			}
 			go m.handleConnection(conn)
 		}
@@ -40,17 +41,17 @@ func (m *MockTelnetServer) Start() error {
 func (m *MockTelnetServer) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	// Отправляем приветствие
+	// Send hello.
 	if m.Response != "" {
 		conn.Write([]byte(m.Response))
 	}
 
-	// Читаем сообщения от клиента
+	// Read clients's messsages.
 	buf := make([]byte, 1024)
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
-			if err != io.EOF {
+			if !errors.Is(err, io.EOF) {
 				fmt.Printf("Server read error: %v\n", err)
 			}
 			return
@@ -59,21 +60,21 @@ func (m *MockTelnetServer) handleConnection(conn net.Conn) {
 		msg := strings.TrimSpace(string(buf[:n]))
 		m.Messages = append(m.Messages, msg)
 
-		// Отправляем эхо-ответ
+		// Send echo ansver
 		if m.Response != "" {
 			conn.Write([]byte(m.Response))
 		}
 	}
 }
 
-// Stop останавливает сервер
+// Stop server.
 func (m *MockTelnetServer) Stop() {
 	if m.listener != nil {
 		m.listener.Close()
 	}
 }
 
-// GetLastMessage возвращает последнее полученное сообщение
+// GetLastMessage return last received message.
 func (m *MockTelnetServer) GetLastMessage() string {
 	if len(m.Messages) == 0 {
 		return ""

@@ -11,16 +11,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockReadCloser имитирует io.ReadCloser
+// MockReadCloser replace io.ReadCloser.
 
-type MockReadCloser1 struct {
+type MockReadCloser struct {
 	closed   bool
 	Data     []string
 	pos      int
 	errorPos int
 }
 
-func (m *MockReadCloser1) Read(p []byte) (n int, err error) {
+func (m *MockReadCloser) Read(p []byte) (n int, err error) {
 	if m.closed {
 		return 0, fmt.Errorf("stream had closed")
 	}
@@ -37,22 +37,22 @@ func (m *MockReadCloser1) Read(p []byte) (n int, err error) {
 	return n, err
 }
 
-func (m *MockReadCloser1) Close() error {
+func (m *MockReadCloser) Close() error {
 	m.closed = true
 	return nil
 }
 
-// MockWriter имитирует io.Writer и сохраняет записанные данные
-type MockWriter1 struct {
+// MockWriter: io.Writer store input data.
+type MockWriter struct {
 	buffer string
 }
 
-func (m *MockWriter1) Write(p []byte) (n int, err error) {
+func (m *MockWriter) Write(p []byte) (n int, err error) {
 	m.buffer += string(p)
 	return len(p), nil
 }
 
-func (m *MockWriter1) Free() (ret string) {
+func (m *MockWriter) Free() (ret string) {
 	ret = m.buffer
 	m.buffer = ""
 	return ret
@@ -64,13 +64,13 @@ type MockConn struct {
 	writeError  string
 }
 
-func (c *MockConn) Read(b []byte) (n int, err error) {
+func (c *MockConn) Read(_ []byte) (n int, err error) {
 	return 0, nil
 }
 
 func (c *MockConn) Write(b []byte) (n int, err error) {
 	if c.writeError != "" {
-		return 0, fmt.Errorf(c.writeError)
+		return 0, fmt.Errorf("%s", c.writeError)
 	}
 	c.writeBuffer += string(b)
 	return 0, nil
@@ -104,16 +104,16 @@ func MyDialTimeout(network, address string, timeout time.Duration) (net.Conn, er
 	return &myDialer.mockConn, myDialer.err
 }
 
-func Test_MockReadCloser1_Ctor(t *testing.T) {
-	var t0 MockReadCloser1
+func Test_MockReadCloser_Ctor(t *testing.T) {
+	var t0 MockReadCloser
 	assert.Equal(t, false, t0.closed)
 	assert.Equal(t, 0, len(t0.Data))
 	assert.Equal(t, 0, t0.pos)
 }
 
 func Test_NewTelnetClient(t *testing.T) {
-	in := &MockReadCloser1{}
-	out := &MockWriter1{}
+	in := &MockReadCloser{}
+	out := &MockWriter{}
 	t0 := NewTelnetClient("1.2.3.4:5", 11*time.Second, in, out)
 
 	c, ok := t0.(*MyTelnetClient)
@@ -122,11 +122,11 @@ func Test_NewTelnetClient(t *testing.T) {
 	assert.Equal(t, "1.2.3.4:5", c.address)
 	assert.Equal(t, 11*time.Second, c.timeout)
 
-	c1, ok1 := c.in.(*MockReadCloser1)
+	c1, ok1 := c.in.(*MockReadCloser)
 	assert.True(t, ok1)
 	assert.Equal(t, in, c1)
 
-	c2, ok2 := c.out.(*MockWriter1)
+	c2, ok2 := c.out.(*MockWriter)
 	assert.True(t, ok2)
 	assert.Equal(t, out, c2)
 
@@ -135,7 +135,6 @@ func Test_NewTelnetClient(t *testing.T) {
 }
 
 func Test_MyTelnetClient_Connect(t *testing.T) {
-
 	t.Run("connection is ok", func(t *testing.T) {
 		t0 := MyTelnetClient{
 			address: "1.2.3.4:5",
@@ -179,12 +178,12 @@ func Test_MyTelnetClient_Connect(t *testing.T) {
 	t.Run("dissconnected by timeout: asked 1 sec, waited more", func(t *testing.T) {
 		t0 := MyTelnetClient{
 			address: "1.2.3.4:5",
-			timeout: 1 * time.Second} // 1 sec timeout
+			timeout: 1 * time.Second} // 1 sec timeout.
 
 		myDialer = MyDialer{}
 		t0.dialer = MyDialTimeout
 		// t0.dialer parameters.
-		myDialer.realTimeOut = 2 * time.Second // real timeout
+		myDialer.realTimeOut = 2 * time.Second // real timeout.
 
 		assert.Nil(t, t0.conn)
 
@@ -196,14 +195,13 @@ func Test_MyTelnetClient_Connect(t *testing.T) {
 		assert.Equal(t, 1*time.Second, myDialer.timeout)
 		assert.Nil(t, t0.conn)
 	})
-
 }
 
 func Test_MyTelnetClient_Send(t *testing.T) {
 	t.Run("sending is ok", func(t *testing.T) {
-		r := MockReadCloser1{
+		r := MockReadCloser{
 			Data:     []string{"Welcome!\n"},
-			errorPos: -1, // no error
+			errorPos: -1, // no error.
 		}
 		myDialer = MyDialer{}
 
@@ -230,7 +228,7 @@ func Test_MyTelnetClient_Send(t *testing.T) {
 	})
 
 	t.Run(" second sending causees error", func(t *testing.T) {
-		r := MockReadCloser1{
+		r := MockReadCloser{
 			Data:     []string{"There will be error!\n", "Never will be sended\n"},
 			errorPos: 1,
 		}
@@ -260,9 +258,9 @@ func Test_MyTelnetClient_Send(t *testing.T) {
 	})
 
 	t.Run("writing error", func(t *testing.T) {
-		r := MockReadCloser1{
+		r := MockReadCloser{
 			Data:     []string{"Welcome!\n"},
-			errorPos: -1, // no error
+			errorPos: -1, // no error.
 		}
 		myDialer = MyDialer{}
 
