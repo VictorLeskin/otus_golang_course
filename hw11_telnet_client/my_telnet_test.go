@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net"
@@ -19,9 +18,6 @@ type MockReadCloser1 struct {
 	Data     []string
 	pos      int
 	errorPos int
-
-	ctx        context.Context // to send Done
-	ctxDonePos int
 }
 
 func (m *MockReadCloser1) Read(p []byte) (n int, err error) {
@@ -31,10 +27,6 @@ func (m *MockReadCloser1) Read(p []byte) (n int, err error) {
 	if m.pos == m.errorPos {
 		return 0, fmt.Errorf("something is wrong")
 	}
-	if m.pos == m.ctxDonePos {
-		m.ctx.Done() <- struct{}{}
-	}
-
 	if m.pos < len(m.Data) {
 		n = copy(p, []byte(m.Data[m.pos]))
 		m.pos++
@@ -210,9 +202,8 @@ func Test_MyTelnetClient_Connect(t *testing.T) {
 func Test_MyTelnetClient_Send(t *testing.T) {
 	t.Run("sending is ok", func(t *testing.T) {
 		r := MockReadCloser1{
-			Data:       []string{"Welcome!\n"},
-			errorPos:   -1, // no error
-			ctxDonePos: -1,
+			Data:     []string{"Welcome!\n"},
+			errorPos: -1, // no error
 		}
 		myDialer = MyDialer{}
 
@@ -240,9 +231,8 @@ func Test_MyTelnetClient_Send(t *testing.T) {
 
 	t.Run(" second sending causees error", func(t *testing.T) {
 		r := MockReadCloser1{
-			Data:       []string{"There will be error!\n", "Never will be sended\n"},
-			errorPos:   1,
-			ctxDonePos: -1,
+			Data:     []string{"There will be error!\n", "Never will be sended\n"},
+			errorPos: 1,
 		}
 		myDialer = MyDialer{}
 
@@ -271,9 +261,8 @@ func Test_MyTelnetClient_Send(t *testing.T) {
 
 	t.Run("writing error", func(t *testing.T) {
 		r := MockReadCloser1{
-			Data:       []string{"Welcome!\n"},
-			errorPos:   -1, // no error
-			ctxDonePos: -1,
+			Data:     []string{"Welcome!\n"},
+			errorPos: -1, // no error
 		}
 		myDialer = MyDialer{}
 
@@ -301,36 +290,4 @@ func Test_MyTelnetClient_Send(t *testing.T) {
 		assert.NotNil(t, t0.conn)
 		assert.Equal(t, "", myDialer.mockConn.writeBuffer)
 	})
-
-	t.Run("sent done", func(t *testing.T) {
-		r := MockReadCloser1{
-			Data:       []string{"Welcome!", "A___A", "B___B", "B___B"},
-			errorPos:   -1, // no error
-			ctxDonePos: 2,  //
-		}
-		myDialer = MyDialer{}
-
-		tc := NewTelnetClient("1.2.3.4:5", 1*time.Second, &r, nil)
-
-		t0, ok := tc.(*MyTelnetClient)
-		require.True(t, ok)
-		r.ctx = t0.ctx
-		t0.dialer = MyDialTimeout
-		t0.wg.Add(1)
-
-		assert.Nil(t, t0.conn)
-		err0 := t0.Connect()
-		assert.Nil(t, err0)
-		require.NotNil(t, t0.conn)
-
-		err := t0.Send()
-
-		assert.Nil(t, err)
-		assert.Equal(t, "tcp", myDialer.network)
-		assert.Equal(t, "1.2.3.4:5", myDialer.address)
-		assert.Equal(t, 1*time.Second, myDialer.timeout)
-		assert.NotNil(t, t0.conn)
-		assert.Equal(t, "Welcome!\n", myDialer.mockConn.writeBuffer)
-	})
-
 }
