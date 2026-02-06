@@ -210,7 +210,6 @@ func Test_MyTelnetClient_Send(t *testing.T) {
 		t0, ok := tc.(*MyTelnetClient)
 		require.True(t, ok)
 		t0.dialer = MyDialTimeout
-		t0.wg.Add(1)
 
 		assert.Nil(t, t0.conn)
 		err0 := t0.Connect()
@@ -239,7 +238,6 @@ func Test_MyTelnetClient_Send(t *testing.T) {
 		t0, ok := tc.(*MyTelnetClient)
 		require.True(t, ok)
 		t0.dialer = MyDialTimeout
-		t0.wg.Add(1)
 
 		assert.Nil(t, t0.conn)
 		err0 := t0.Connect()
@@ -269,7 +267,6 @@ func Test_MyTelnetClient_Send(t *testing.T) {
 		t0, ok := tc.(*MyTelnetClient)
 		require.True(t, ok)
 		t0.dialer = MyDialTimeout
-		t0.wg.Add(1)
 
 		assert.Nil(t, t0.conn)
 		err0 := t0.Connect()

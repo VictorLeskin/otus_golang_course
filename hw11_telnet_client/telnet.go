@@ -49,7 +49,6 @@ type MyTelnetClient struct {
 	cancel context.CancelFunc
 
 	conn net.Conn
-	wg   sync.WaitGroup
 
 	// by default it is net.DialTimeout.
 	// for testing purposes it can be replaced by a function to destroy Universe.
@@ -67,8 +66,6 @@ func (c *MyTelnetClient) Connect() error {
 }
 
 func (c *MyTelnetClient) Send() error {
-	defer c.wg.Done()
-
 	scanner := bufio.NewScanner(c.in)
 	for scanner.Scan() {
 		select {
@@ -93,8 +90,6 @@ func (c *MyTelnetClient) Send() error {
 }
 
 func (c *MyTelnetClient) Receive() error {
-	defer c.wg.Done()
-
 	// nonblocking reading.
 	c.conn.SetReadDeadline(time.Time{}) // remove timeout.
 
@@ -126,7 +121,6 @@ func (c *MyTelnetClient) Receive() error {
 
 func (c *MyTelnetClient) Close() error {
 	c.cancel()
-	c.wg.Wait()
 	if c.conn != nil {
 		return c.conn.Close()
 	}
@@ -152,8 +146,9 @@ func (c *MyTelnetClient) Run() error {
 		return fmt.Errorf("connection failed: %w", err)
 	}
 	defer c.Close()
+	var wg sync.WaitGroup
 
-	c.wg.Add(2)
+	wg.Add(2)
 
 	// start goroutines.
 	go func() {
@@ -165,7 +160,7 @@ func (c *MyTelnetClient) Run() error {
 	}()
 
 	// end finishing WaitGroup.
-	c.wg.Wait()
+	wg.Wait()
 
 	return nil
 }
