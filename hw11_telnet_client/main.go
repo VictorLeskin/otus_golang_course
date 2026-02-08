@@ -21,7 +21,7 @@ func main() {
 		params.host+":"+strconv.Itoa(params.port),
 		params.timeout,
 		os.Stdin,
-		os.Stdin)
+		os.Stdout)
 
 	if c, ok := client.(*MyTelnetClient); ok {
 		if err := c.Run(); err != nil {

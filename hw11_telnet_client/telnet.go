@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -85,14 +86,10 @@ func (c *MyTelnetClient) Send() error {
 	}
 
 	// Ctrl+D - end of input.
-	c.cancel()
 	return nil
 }
 
 func (c *MyTelnetClient) Receive() error {
-	// nonblocking reading.
-	c.conn.SetReadDeadline(time.Time{}) // remove timeout.
-
 	reader := bufio.NewReader(c.conn)
 	buf := make([]byte, 1024)
 
@@ -101,18 +98,28 @@ func (c *MyTelnetClient) Receive() error {
 		case <-c.ctx.Done():
 			return nil
 		default:
+			// nonblocking reading.
+			c.conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+
 			n, err := reader.Read(buf)
 			if err != nil {
-				c.cancel()
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					fmt.Println("Connection closed by server")
+					c.cancel() // Notify another coroutines
 					return nil
 				}
-				return fmt.Errorf("server send error: %w", err)
+
+				var netErr net.Error
+				if errors.As(err, &netErr) && netErr.Timeout() {
+					continue // Timeout
+				}
+
+				// something happens
+				c.cancel()
+				return fmt.Errorf("receive error: %w", err)
 			}
 
 			if n > 0 {
-				// Output received data.
 				c.out.Write(buf[:n])
 			}
 		}
@@ -128,7 +135,7 @@ func (c *MyTelnetClient) Close() error {
 }
 
 func (c *MyTelnetClient) Run() error {
-	// add processsing Ctrl+C.
+	// Ctrl+C
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
@@ -136,7 +143,6 @@ func (c *MyTelnetClient) Run() error {
 		<-sigCh
 		fmt.Println("\n^C")
 		c.cancel()
-		// close immediately.
 		if c.conn != nil {
 			c.conn.Close()
 		}
@@ -146,21 +152,48 @@ func (c *MyTelnetClient) Run() error {
 		return fmt.Errorf("connection failed: %w", err)
 	}
 	defer c.Close()
-	var wg sync.WaitGroup
 
+	var wg sync.WaitGroup
 	wg.Add(2)
 
-	// start goroutines.
+	// Error channels
+	sendErr := make(chan error, 1)
+	recvErr := make(chan error, 1)
+
 	go func() {
-		c.Send()
+		defer wg.Done()
+		if err := c.Send(); err != nil {
+			sendErr <- err
+		}
 	}()
 
 	go func() {
-		c.Receive()
+		defer wg.Done()
+		if err := c.Receive(); err != nil {
+			recvErr <- err
+		}
 	}()
 
-	// end finishing WaitGroup.
-	wg.Wait()
+	// wait ending
+	go func() {
+		wg.Wait()
+		close(sendErr)
+		close(recvErr)
+	}()
+
+	// Wait error or normal enidng
+	select {
+	case err := <-sendErr:
+		if !errors.Is(err, context.Canceled) {
+			return fmt.Errorf("send error: %w", err)
+		}
+	case err := <-recvErr:
+		if !errors.Is(err, context.Canceled) {
+			return fmt.Errorf("receive error: %w", err)
+		}
+	case <-c.ctx.Done():
+		// ok.
+	}
 
 	return nil
 }

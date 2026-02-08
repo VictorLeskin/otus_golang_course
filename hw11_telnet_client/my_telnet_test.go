@@ -138,7 +138,8 @@ func Test_MyTelnetClient_Connect(t *testing.T) {
 	t.Run("connection is ok", func(t *testing.T) {
 		t0 := MyTelnetClient{
 			address: "1.2.3.4:5",
-			timeout: 1 * time.Second}
+			timeout: 1 * time.Second,
+		}
 
 		myDialer = MyDialer{}
 		t0.dialer = MyDialTimeout
@@ -157,7 +158,8 @@ func Test_MyTelnetClient_Connect(t *testing.T) {
 	t.Run("bad connection by unknown error", func(t *testing.T) {
 		t0 := MyTelnetClient{
 			address: "1.2.3.4:5",
-			timeout: 1 * time.Second}
+			timeout: 1 * time.Second,
+		}
 
 		myDialer = MyDialer{}
 		t0.dialer = MyDialTimeout
@@ -178,7 +180,8 @@ func Test_MyTelnetClient_Connect(t *testing.T) {
 	t.Run("dissconnected by timeout: asked 1 sec, waited more", func(t *testing.T) {
 		t0 := MyTelnetClient{
 			address: "1.2.3.4:5",
-			timeout: 1 * time.Second} // 1 sec timeout.
+			timeout: 1 * time.Second,
+		} // 1 sec timeout.
 
 		myDialer = MyDialer{}
 		t0.dialer = MyDialTimeout
@@ -286,3 +289,26 @@ func Test_MyTelnetClient_Send(t *testing.T) {
 		assert.Equal(t, "", myDialer.mockConn.writeBuffer)
 	})
 }
+
+/*
+func Test_MyTelnetClient_Run(t *testing.T) {
+
+	t.Run("telent to tcpbin.com:4242", func(t *testing.T) {
+
+		client := NewTelnetClient(
+			"127.0.0.1:8080",
+			time.Second,
+			os.Stdin,
+			os.Stdin)
+
+		if c, ok := client.(*MyTelnetClient); ok {
+			if err := c.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+		}
+
+		os.Exit(0)
+	})
+}
+*/
