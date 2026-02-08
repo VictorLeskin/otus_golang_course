@@ -12,7 +12,7 @@ func main() {
 
 	params, err := ParseCommandLine()
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		flag.Usage()
 		os.Exit(1)
 	}

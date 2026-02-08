@@ -62,7 +62,7 @@ func (c *MyTelnetClient) Connect() error {
 		return err
 	}
 	c.conn = conn
-	fmt.Printf("Connected to %s\n", c.address)
+	fmt.Fprintf(os.Stderr, "Connected to %s\n", c.address)
 	return nil
 }
 
@@ -104,7 +104,7 @@ func (c *MyTelnetClient) Receive() error {
 			n, err := reader.Read(buf)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
-					fmt.Println("Connection closed by server")
+					fmt.Fprintln(os.Stderr, "Connection closed by server")
 					c.cancel() // Notify another coroutines
 					return nil
 				}
@@ -141,7 +141,6 @@ func (c *MyTelnetClient) Run() error {
 
 	go func() {
 		<-sigCh
-		fmt.Println("\n^C")
 		c.cancel()
 		if c.conn != nil {
 			c.conn.Close()
