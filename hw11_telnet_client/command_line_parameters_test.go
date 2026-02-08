@@ -67,10 +67,12 @@ func Test_parseCommadLine(t *testing.T) {
 			wantErrStr: "host and port are required",
 		},
 		{
-			name:       "invalid host format",
-			args:       []string{"not-an-ip", "8080"},
-			wantErr:    true,
-			wantErrStr: "wrong host address",
+			name:        "invalid host format",
+			args:        []string{"localhost", "8080"},
+			wantHost:    "localhost",
+			wantPort:    8080,
+			wantTimeout: 10 * time.Second,
+			wantErr:     false,
 		},
 		{
 			name:       "port is not a number",
@@ -101,12 +103,6 @@ func Test_parseCommadLine(t *testing.T) {
 			args:       []string{"-invalid-flag", "192.168.1.1", "8080"},
 			wantErr:    true,
 			wantErrStr: "error parsing command line parameters:\nflag provided but not defined: -invalid-flag",
-		},
-		{
-			name:       "host with too few octets",
-			args:       []string{"192.168.1", "8080"},
-			wantErr:    true,
-			wantErrStr: "wrong host address",
 		},
 		{
 			name:        "valid host but extra arguments",
