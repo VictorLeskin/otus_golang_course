@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"strconv"
 	"time"
@@ -53,10 +52,6 @@ func parseCommandLine(args0 []string) (ret CommanLineParameter, err error) {
 	ret.host = args[0]
 	if ret.host == "" {
 		return ret, errors.New("missed host address")
-	}
-
-	if net.ParseIP(ret.host) == nil { // Не IP
-		return ret, errors.New("wrong host address")
 	}
 
 	// Check port.
