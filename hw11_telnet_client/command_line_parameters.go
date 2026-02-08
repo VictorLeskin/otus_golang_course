@@ -64,11 +64,6 @@ func parseCommandLine(args0 []string) (ret CommanLineParameter, err error) {
 		return ret, fmt.Errorf("port number must be in range [1,65535]")
 	}
 
-	// Check result
-	fmt.Printf("Host: %s\n", ret.host)
-	fmt.Printf("Port: %d\n", ret.port)
-	fmt.Printf("Timeout: %f\n", ret.timeout.Seconds())
-
 	return ret, nil
 }
 
