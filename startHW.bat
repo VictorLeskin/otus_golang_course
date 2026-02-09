@@ -6,6 +6,7 @@ set HW=hw08_envdir_tool
 set HW=hw09_struct_validator
 set HW=hw10_program_optimization
 set HW=hw11_telnet_client
+set HW=hw12_calendar
 
 git switch master
 pause
