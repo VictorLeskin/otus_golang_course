@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -28,7 +29,12 @@ func main() {
 		return
 	}
 
-	config := NewConfig()
+	config, err := LoadConfig("config.json")
+	if err != nil {
+		fmt.Printf("Error loading confing %s", err.Error())
+		return
+	}
+
 	logg := logger.New(config.Logger.Level)
 
 	storage := memorystorage.New()
