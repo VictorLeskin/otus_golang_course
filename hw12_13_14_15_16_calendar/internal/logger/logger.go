@@ -19,13 +19,11 @@ type Logger struct { // TODO
 	file         *os.File // храним файл отдельно, если это файл
 }
 
-func New(config LoggerConfig) *Logger {
-	var output io.Writer
-	var file *os.File
-	if config.File == "" {
+func getWriter(fileName string) (output io.Writer, file *os.File, err error) {
+	if fileName == "" {
 		output = os.Stdout
 	} else {
-		f, err := os.OpenFile(config.File, os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			panic(fmt.Errorf("cannot open log file: %w", err))
 		}
@@ -33,6 +31,14 @@ func New(config LoggerConfig) *Logger {
 		file = f
 	}
 
+	return output, file, err
+}
+
+func New(config LoggerConfig) *Logger {
+	output, file, err := getWriter(config.File)
+	if err != nil {
+		panic(fmt.Errorf("cannot open log file: %w", err))
+	}
 	return &Logger{
 		loggingLevel: validLevels[config.Level],
 		output:       output,
@@ -89,13 +95,13 @@ func (l Logger) println0(lvl string, msg string) {
 }
 
 func (l Logger) Println(lvl int, msg string) {
-	if l.loggingLevel >= lvl {
+	if lvl >= l.loggingLevel {
 		l.println0(headerLevels[lvl], msg)
 	}
 }
 
 func (l Logger) Printf(lvl int, format string, args ...interface{}) {
-	if l.loggingLevel >= lvl {
+	if lvl >= l.loggingLevel {
 		msg := fmt.Sprintf(format, args...)
 		l.println0(headerLevels[lvl], msg)
 	}
