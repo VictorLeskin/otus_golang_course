@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 )
 
 // При желании конфигурацию можно вынести в internal/config.
@@ -61,27 +60,8 @@ func LoadConfig(path string) (*Config, error) {
 
 func ValidateConfig(cfg *Config) error {
 	// Валидация уровня логирования.
-	if err := validateLogLevel(cfg.Logger.Level); err != nil {
+	if err := logger.ValidateLogLevel(cfg.Logger.Level); err != nil {
 		return err
 	}
-	return nil
-}
-
-// validateLogLevel проверяет корректность уровня логирования.
-func validateLogLevel(level string) error {
-	validLevels := map[string]bool{
-		"debug":   true,
-		"info":    true,
-		"warning": true,
-		"error":   true, // Логирует ошибку	Ошибка в бизнес-логике.
-		"fatal":   true, // Логирует и завершает программу	Невозможно продолжать работу.
-		"panic":   true, // Логирует и вызывает panic	Программная ошибка, баг.
-	}
-
-	lowerLevel := strings.ToLower(level)
-	if !validLevels[lowerLevel] {
-		return fmt.Errorf("invalid log level: %s. Valid values: debug, info, warning, error", level)
-	}
-
 	return nil
 }
