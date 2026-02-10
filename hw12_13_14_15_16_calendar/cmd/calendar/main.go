@@ -34,6 +34,11 @@ func main() {
 		fmt.Printf("Error loading confing %s", err.Error())
 		return
 	}
+	err = ValidateConfig(config)
+	if err != nil {
+		fmt.Printf("Error validating confing %s", err.Error())
+		config = NewDefaultConfig()
+	}
 
 	logg := logger.New(config.Logger.Level)
 
