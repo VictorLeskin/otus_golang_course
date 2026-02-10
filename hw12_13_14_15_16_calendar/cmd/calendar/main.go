@@ -42,6 +42,8 @@ func main() {
 
 	logg := logger.New(config.Logger)
 
+	defer logg.Close()
+
 	storage := memorystorage.New()
 	calendar := app.New(logg, storage)
 
