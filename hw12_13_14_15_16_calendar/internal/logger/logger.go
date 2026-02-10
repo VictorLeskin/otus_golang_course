@@ -1,11 +1,19 @@
 package logger
 
-import "fmt"
+import (
+	"fmt"
+)
+
+// LoggerConfig настройки логгера.
+type LoggerConfig struct {
+	Level string `json:"level"`
+	File  string `json:"file"`
+}
 
 type Logger struct { // TODO
 }
 
-func New(level string) *Logger {
+func New(config LoggerConfig) *Logger {
 	return &Logger{}
 }
 

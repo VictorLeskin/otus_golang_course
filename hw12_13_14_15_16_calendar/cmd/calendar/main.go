@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/app"
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/logger"
-	internalhttp "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/server/http"
-	memorystorage "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/storage/memory"
+	"calendar/internal/app"
+	"calendar/internal/logger"
+	internalhttp "calendar/internal/server/http"
+	memorystorage "calendar/internal/storage/memory"
 )
 
 var configFile string
@@ -40,7 +40,7 @@ func main() {
 		config = NewDefaultConfig()
 	}
 
-	logg := logger.New(config.Logger.Level)
+	logg := logger.New(config.Logger)
 
 	storage := memorystorage.New()
 	calendar := app.New(logg, storage)

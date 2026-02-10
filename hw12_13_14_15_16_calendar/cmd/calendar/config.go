@@ -1,6 +1,7 @@
 package main
 
 import (
+	"calendar/internal/logger"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,24 +15,18 @@ import (
 
 // Config основная структура конфигурации.
 type Config struct {
-	Logger LoggerConfig `json:"logger"`
+	Logger logger.LoggerConfig `json:"logger"`
 	// add confings for other subparts of project.
 }
 
 // NewDefaultConfig возвращает конфиг со значениями по умолчанию.
 func NewDefaultConfig() *Config {
 	return &Config{
-		Logger: LoggerConfig{
+		Logger: logger.LoggerConfig{
 			Level: "info",
 			File:  "calendar.log",
 		},
 	}
-}
-
-// LoggerConfig настройки логгера.
-type LoggerConfig struct {
-	Level string `json:"level"`
-	File  string `json:"file"`
 }
 
 func ReadAll(path string) ([]byte, error) {
