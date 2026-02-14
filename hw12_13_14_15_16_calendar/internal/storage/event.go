@@ -13,6 +13,8 @@ type Event struct {
 	StartTime   time.Time
 	EndTime     time.Time
 	UserID      string
+	CreateAt    time.Time
+	UpdatedAt   time.Time
 }
 
 type Storage interface {
