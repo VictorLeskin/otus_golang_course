@@ -3,15 +3,16 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/app"
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/logger"
-	internalhttp "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/server/http"
-	memorystorage "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/storage/memory"
+	"calendar/internal/app"
+	"calendar/internal/logger"
+	internalhttp "calendar/internal/server/http"
+	memorystorage "calendar/internal/storage/memory"
 )
 
 var configFile string
@@ -28,8 +29,20 @@ func main() {
 		return
 	}
 
-	config := NewConfig()
-	logg := logger.New(config.Logger.Level)
+	config, err := LoadConfig("config.json")
+	if err != nil {
+		fmt.Printf("Error loading confing %s", err.Error())
+		return
+	}
+	err = ValidateConfig(config)
+	if err != nil {
+		fmt.Printf("Error validating confing %s", err.Error())
+		config = NewDefaultConfig()
+	}
+
+	logg := logger.New(config.Logger)
+
+	defer logg.Close()
 
 	storage := memorystorage.New()
 	calendar := app.New(logg, storage)

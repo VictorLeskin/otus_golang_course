@@ -5,6 +5,7 @@ set HW=hw07_file_copying
 set HW=hw08_envdir_tool
 set HW=hw09_struct_validator
 set HW=hw10_program_optimization
+set HW=hw12_calendar
 
 git switch master
 pause
