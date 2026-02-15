@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+type Config struct {
+	Type string // memory or SQL
+}
+
+
 type Event struct {
 	ID          string
 	Title       string

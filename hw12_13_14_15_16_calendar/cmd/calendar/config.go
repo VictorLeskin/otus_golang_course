@@ -2,6 +2,9 @@ package main
 
 import (
 	"calendar/internal/logger"
+	internalhttp "calendar/internal/server/http"
+	"calendar/internal/storage"
+	sqlstorage "calendar/internal/storage/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,7 +17,10 @@ import (
 
 // Config основная структура конфигурации.
 type Config struct {
-	Logger logger.LoggerConfig `json:"logger"`
+	Logger     logger.LoggerConfig `json:"logger"`
+	Server     internalhttp.Config `json:"server"`
+	Storage    storage.Config      `json:"storage"`
+	SQLStorage sqlstorage.Config   `json:"sqlstorage"`
 	// add confings for other subparts of project.
 }
 
