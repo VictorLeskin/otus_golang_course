@@ -24,6 +24,10 @@ type Config struct {
 	// add confings for other subparts of project.
 }
 
+var (
+	ErrInvalidConfig = fmt.Errorf("not valid config")
+)
+
 // NewDefaultConfig возвращает конфиг со значениями по умолчанию.
 func NewDefaultConfig() *Config {
 	return &Config{
@@ -61,13 +65,17 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing JSON: %w", err)
 	}
 
+	if err = ValidateConfig(&cfg); err != nil {
+		return nil, err
+	}
+
 	return &cfg, nil
 }
 
 func ValidateConfig(cfg *Config) error {
 	// Валидация уровня логирования.
 	if err := logger.ValidateLogLevel(cfg.Logger.Level); err != nil {
-		return err
+		return ErrInvalidConfig
 	}
 	return nil
 }

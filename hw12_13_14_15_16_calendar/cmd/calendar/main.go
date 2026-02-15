@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -31,23 +32,21 @@ func main() {
 
 	config, err := LoadConfig("config.json")
 	if err != nil {
-		fmt.Printf("Error loading confing %s", err.Error())
-		return
-	}
-	err = ValidateConfig(config)
-	if err != nil {
-		fmt.Printf("Error validating confing %s", err.Error())
-		config = NewDefaultConfig()
+		if errors.Is(err, ErrInvalidConfig) {
+			fmt.Printf("Error validating confing %w", err.Error())
+			config = NewDefaultConfig()
+		} else {
+			fmt.Printf("Error loading confing %s", err.Error())
+			return
+		}
 	}
 
 	logg := logger.New(config.Logger)
-
 	defer logg.Close()
 
 	storage := memorystorage.New()
 	calendar := app.New(logg, storage)
-
-	server := internalhttp.NewServer(&config.Server, calendar)
+	server := internalhttp.NewServer(config.Server, calendar)
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)

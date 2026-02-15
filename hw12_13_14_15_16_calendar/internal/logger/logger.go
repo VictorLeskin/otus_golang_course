@@ -46,6 +46,13 @@ func New(config LoggerConfig) *Logger {
 	}
 }
 
+func NewWriterLogger(level string, output io.Writer) *Logger {
+	return &Logger{
+		loggingLevel: validLevels[level],
+		output:       output,
+	}
+}
+
 func (l *Logger) Close() error {
 	if l.file != nil {
 		return l.file.Close()
