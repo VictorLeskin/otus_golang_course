@@ -61,7 +61,6 @@ func TestLogger_Println(t *testing.T) {
 }
 
 func TestLogger_Printf(t *testing.T) {
-
 	var buf strings.Builder // уже имеет Write([]byte) (int, error)
 	t0 := Logger{output: &buf, loggingLevel: 1}
 

@@ -4,6 +4,7 @@ import (
 	"calendar/internal/storage"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/lib/pq"
@@ -55,16 +56,19 @@ func (s *SQLStorage) Connect(ctx context.Context) error {
 	return nil
 }
 
-func (s *SQLStorage) Close(ctx context.Context) error {
+func (s *SQLStorage) Close(_ context.Context) error {
 	return s.db.Close()
 }
 
-// Вспомогательная функция для определения duplicate key
+// Вспомогательная функция для определения duplicate key.
 func isDuplicateError(err error) bool {
-	// PostgreSQL error code for duplicating "23505"
-	if pqErr, ok := err.(*pq.Error); ok {
-		return pqErr.Code == "23505"
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		if pqErr.Code == "23505" { // PostgreSQL error code for duplicating "23505".
+			return true
+		}
 	}
+
 	return false
 }
 

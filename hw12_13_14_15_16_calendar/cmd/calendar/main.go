@@ -33,7 +33,7 @@ func main() {
 	config, err := LoadConfig("config.json")
 	if err != nil {
 		if errors.Is(err, ErrInvalidConfig) {
-			fmt.Printf("Error validating confing %w", err.Error())
+			fmt.Println(fmt.Errorf("error validating confing %w", err))
 			config = NewDefaultConfig()
 		} else {
 			fmt.Printf("Error loading confing %s", err.Error())

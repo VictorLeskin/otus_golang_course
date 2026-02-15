@@ -17,7 +17,7 @@ import (
 
 // Config основная структура конфигурации.
 type Config struct {
-	Logger     logger.LoggerConfig `json:"logger"`
+	Logger     logger.Config       `json:"logger"`
 	Server     internalhttp.Config `json:"server"`
 	Storage    storage.Config      `json:"storage"`
 	SQLStorage sqlstorage.Config   `json:"sqlstorage"`
@@ -31,7 +31,7 @@ var (
 // NewDefaultConfig возвращает конфиг со значениями по умолчанию.
 func NewDefaultConfig() *Config {
 	return &Config{
-		Logger: logger.LoggerConfig{
+		Logger: logger.Config{
 			Level: "info",
 			File:  "calendar.log",
 		},

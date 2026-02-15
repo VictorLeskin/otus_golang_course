@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// LoggerConfig настройки логгера.
-type LoggerConfig struct {
+// Config настройки логгера.
+type Config struct {
 	Level string `json:"level"`
 	File  string `json:"file"`
 }
@@ -23,18 +23,19 @@ func getWriter(fileName string) (output io.Writer, file *os.File, err error) {
 	if fileName == "" {
 		output = os.Stdout
 	} else {
-		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			panic(fmt.Errorf("cannot open log file: %w", err))
+		f, err0 := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
+		if err0 != nil {
+			err = err0
+		} else {
+			output = f
+			file = f
 		}
-		output = f
-		file = f
 	}
 
 	return output, file, err
 }
 
-func New(config LoggerConfig) *Logger {
+func New(config Config) *Logger {
 	output, file, err := getWriter(config.File)
 	if err != nil {
 		panic(fmt.Errorf("cannot open log file: %w", err))

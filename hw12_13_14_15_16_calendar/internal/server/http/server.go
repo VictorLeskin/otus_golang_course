@@ -31,7 +31,6 @@ func NewServer(cfg Config, app *app.App) *Server {
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	// TODO
 	s.log.Infof("Starting HTTP server on %s", s.addr)
 	if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("server failed: %w", err)
@@ -48,11 +47,11 @@ func (s *Server) Stop(ctx context.Context) error {
 func (s *Server) RegisterHandlers() {
 	mux := http.NewServeMux()
 
-	// Hello-world endpoint
+	// Hello-world endpoint.
 	mux.HandleFunc("/", s.handleHello)
 	mux.HandleFunc("/hello", s.handleHello)
 
-	// Add logging before answer and after answer
+	// Add logging before answer and after answer.
 	handler := LoggingMiddleware(s.log)(mux)
 
 	s.httpServer = &http.Server{
@@ -68,7 +67,7 @@ func (s *Server) GetHandler() http.Handler {
 	return s.httpServer.Handler
 }
 
-// handleHello обработчик для hello-world
+// handleHello обработчик для hello-world.
 func (s *Server) handleHello(w http.ResponseWriter, r *http.Request) {
 	// Простой ответ
 	response := "Hello, World!\n"
