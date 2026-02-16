@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"calendar/internal/storage"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

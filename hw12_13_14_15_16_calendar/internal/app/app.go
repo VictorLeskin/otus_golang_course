@@ -1,9 +1,10 @@
 package app
 
 import (
+	"context"
+
 	"calendar/internal/logger"
 	"calendar/internal/storage"
-	"context"
 )
 
 type App struct { // TODO
@@ -20,6 +21,9 @@ func New(logger *logger.Logger, storage storage.Storage) *App {
 
 func (a *App) CreateEvent(ctx context.Context, id, title string) error {
 	// TODO
+	_ = ctx
+	_ = id
+	_ = title
 	return nil
 	// return a.storage.CreateEvent(storage.Event{ID: id, Title: title})
 }

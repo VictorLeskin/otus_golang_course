@@ -1,14 +1,13 @@
 package sqlstorage
 
 import (
-	"calendar/internal/storage"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 
-	"github.com/lib/pq"
-	_ "github.com/lib/pq" // драйвер PostgreSQL
+	"calendar/internal/storage"
+	"github.com/lib/pq" // драйвер PostgreSQL
 )
 
 type Config struct {
@@ -85,7 +84,6 @@ func (s *SQLStorage) CreateEvent(ctx context.Context, event *storage.Event) erro
 		event.EndTime,
 		event.UserID,
 	)
-
 	if err != nil {
 		// Проверяем на duplicate key
 		if isDuplicateError(err) {
@@ -112,7 +110,6 @@ func (s *SQLStorage) UpdateEvent(ctx context.Context, event *storage.Event) erro
 		event.EndTime,
 		event.UserID,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to update event %s: %w", event.ID, err)
 	}

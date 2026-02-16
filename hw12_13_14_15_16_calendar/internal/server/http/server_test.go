@@ -2,14 +2,14 @@ package internalhttp
 
 import (
 	"bytes"
-	"calendar/internal/app"
-	"calendar/internal/logger"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"calendar/internal/app"
+	"calendar/internal/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

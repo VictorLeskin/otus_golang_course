@@ -1,11 +1,11 @@
 package sqlstorage
 
 import (
-	"calendar/internal/storage"
 	"context"
 	"testing"
 	"time"
 
+	"calendar/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -166,7 +166,7 @@ func TestPostgresStorage_Integration(t *testing.T) {
 
 // Вспомогательная функция для очистки тестовых данных.
 func cleanupTestData(t *testing.T, store *SQLStorage) {
-        t.Helper()
+	t.Helper()
 	ctx := context.Background()
 	_, err := store.db.ExecContext(ctx, "DELETE FROM events WHERE id LIKE 'test-%'")
 	require.NoError(t, err, "Failed to clean test data")

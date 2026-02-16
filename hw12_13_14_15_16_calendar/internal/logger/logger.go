@@ -23,7 +23,7 @@ func getWriter(fileName string) (output io.Writer, file *os.File, err error) {
 	if fileName == "" {
 		output = os.Stdout
 	} else {
-		f, err0 := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
+		f, err0 := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0o644)
 		if err0 != nil {
 			err = err0
 		} else {

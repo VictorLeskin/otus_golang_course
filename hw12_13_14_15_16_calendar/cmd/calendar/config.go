@@ -1,14 +1,15 @@
 package main
 
 import (
-	"calendar/internal/logger"
-	internalhttp "calendar/internal/server/http"
-	"calendar/internal/storage"
-	sqlstorage "calendar/internal/storage/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+
+	"calendar/internal/logger"
+	internalhttp "calendar/internal/server/http"
+	"calendar/internal/storage"
+	sqlstorage "calendar/internal/storage/sql"
 )
 
 // При желании конфигурацию можно вынести в internal/config.
@@ -24,9 +25,7 @@ type Config struct {
 	// add confings for other subparts of project.
 }
 
-var (
-	ErrInvalidConfig = fmt.Errorf("not valid config")
-)
+var ErrInvalidConfig = fmt.Errorf("not valid config")
 
 // NewDefaultConfig возвращает конфиг со значениями по умолчанию.
 func NewDefaultConfig() *Config {
