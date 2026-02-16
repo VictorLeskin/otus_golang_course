@@ -1,13 +1,12 @@
 package internalhttp
 
 import (
+	"calendar/internal/app"
+	"calendar/internal/logger"
 	"context"
 	"fmt"
 	"net/http"
 	"time"
-
-	"calendar/internal/app"
-	"calendar/internal/logger"
 )
 
 type Config struct {

@@ -1,10 +1,10 @@
 package memorystorage
 
 import (
+	"calendar/internal/storage"
 	"context"
 	"testing"
 
-	"calendar/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

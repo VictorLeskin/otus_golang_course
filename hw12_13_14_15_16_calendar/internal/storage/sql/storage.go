@@ -1,12 +1,12 @@
 package sqlstorage
 
 import (
+	"calendar/internal/storage"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 
-	"calendar/internal/storage"
 	"github.com/lib/pq" // драйвер PostgreSQL
 )
 

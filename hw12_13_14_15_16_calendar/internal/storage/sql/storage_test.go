@@ -1,11 +1,11 @@
 package sqlstorage
 
 import (
+	"calendar/internal/storage"
 	"context"
 	"testing"
 	"time"
 
-	"calendar/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

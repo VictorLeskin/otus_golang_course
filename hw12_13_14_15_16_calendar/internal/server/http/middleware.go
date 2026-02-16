@@ -1,10 +1,9 @@
 package internalhttp
 
 import (
+	"calendar/internal/logger"
 	"net/http"
 	"time"
-
-	"calendar/internal/logger"
 )
 
 func LoggingMiddleware(logger *logger.Logger) func(http.Handler) http.Handler {

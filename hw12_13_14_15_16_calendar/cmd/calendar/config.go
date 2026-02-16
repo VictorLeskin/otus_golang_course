@@ -1,14 +1,15 @@
 package main
 
 import (
+	"calendar/internal/logger"
+	"calendar/internal/storage"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 
-	"calendar/internal/logger"
 	internalhttp "calendar/internal/server/http"
-	"calendar/internal/storage"
+
 	sqlstorage "calendar/internal/storage/sql"
 )
 

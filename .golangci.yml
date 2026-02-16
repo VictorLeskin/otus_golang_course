@@ -48,7 +48,6 @@ linters:
     - exhaustive
     - copyloopvar
     - funlen
-    - gci
     - gocognit
     - goconst
     - gocritic

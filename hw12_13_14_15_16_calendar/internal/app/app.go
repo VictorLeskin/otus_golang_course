@@ -1,10 +1,9 @@
 package app
 
 import (
-	"context"
-
 	"calendar/internal/logger"
 	"calendar/internal/storage"
+	"context"
 )
 
 type App struct { // TODO
