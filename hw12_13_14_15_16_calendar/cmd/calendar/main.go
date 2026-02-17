@@ -1,17 +1,19 @@
 package main
 
 import (
+	"calendar/internal/app"
+	"calendar/internal/logger"
 	"context"
+	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/app"
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/logger"
-	internalhttp "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/server/http"
-	memorystorage "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/storage/memory"
+	internalhttp "calendar/internal/server/http"
+	memorystorage "calendar/internal/storage/memory"
 )
 
 var configFile string
@@ -28,13 +30,23 @@ func main() {
 		return
 	}
 
-	config := NewConfig()
-	logg := logger.New(config.Logger.Level)
+	config, err := LoadConfig("config.json")
+	if err != nil {
+		if errors.Is(err, ErrInvalidConfig) {
+			fmt.Println(fmt.Errorf("error validating confing %w", err))
+			config = NewDefaultConfig()
+		} else {
+			fmt.Printf("Error loading confing %s", err.Error())
+			return
+		}
+	}
+
+	logg := logger.New(config.Logger)
+	defer logg.Close()
 
 	storage := memorystorage.New()
 	calendar := app.New(logg, storage)
-
-	server := internalhttp.NewServer(logg, calendar)
+	server := internalhttp.NewServer(config.Server, calendar)
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)

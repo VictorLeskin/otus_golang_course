@@ -17,12 +17,15 @@ linters-settings:
         allow:
           - $gostd
           - golang.org/x/example/hello/reverse
+          - calendar/internal
+          - github.com/lib/pq
       Test:
         files:
           - $test
         allow:
           - $gostd
           - github.com/stretchr/testify
+          - calendar/internal
 issues:
   exclude-rules:
     - path: _test\.go
@@ -45,7 +48,6 @@ linters:
     - exhaustive
     - copyloopvar
     - funlen
-    - gci
     - gocognit
     - goconst
     - gocritic
