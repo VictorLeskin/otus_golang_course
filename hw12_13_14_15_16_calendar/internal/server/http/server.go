@@ -10,8 +10,8 @@ import (
 )
 
 type Config struct {
-	Host string
-	Port string
+	Host string `json:"host"`
+	Port string `json:"port"`
 }
 
 type Server struct {

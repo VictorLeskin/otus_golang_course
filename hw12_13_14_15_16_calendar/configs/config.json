@@ -1,20 +1,20 @@
 {
-  "logger": {
-    "level": "info",
-    "file": "calendar.log"
-  },
-  "server": {
-    "host": "localhost",
-    "port": "8080"
-  },
-  "storage": {
-    "type": "inmemory",
-    "postgres": {
-      "host": "localhost",
-      "port": 5432,
-      "database": "calendar",
-      "username": "calendar_user",
-      "password": "calendar_pass"
-    }
-  }
+	"logger": {
+		"level": "info",
+		"file": "calendar.log"
+	},
+	"server": {
+		"host": "188.33.44.66",
+		"port": "9876"
+	},
+	"storage": { 
+		"type" : "sqlstorage" 
+	},
+	"sqlstorage": {
+		"host": "localhost",
+		"port": 5432,
+		"database": "calendar",
+		"username": "calendar_user",
+		"password": "calendar_pass"
+	}
 }

@@ -30,6 +30,81 @@ func TestReadAll(t *testing.T) {
 	}
 }
 
+func TestLoadFullApplicationConfigWithSQLStorage(t *testing.T) {
+	fullJSON := `
+	{
+		"logger": {
+			"level": "info",
+			"file": "calendar.log"
+		},
+		"server": {
+			"host": "188.33.44.66",
+			"port": "9876"
+		},
+		"storage": { 
+			"type" : "sqlstorage" 
+		},
+		"sqlstorage": {
+			"host": "localhost",
+			"port": 5432,
+			"database": "calendar",
+			"username": "calendar_user",
+			"password": "calendar_pass"
+		}
+	}`
+
+	tmpFile := createTempFile(t, fullJSON)
+	defer os.Remove(tmpFile.Name())
+
+	cfg, err := LoadConfig(tmpFile.Name())
+
+	assert.Nil(t, err)
+	assert.Equal(t, "info", cfg.Logger.Level)
+	assert.Equal(t, "calendar.log", cfg.Logger.File)
+
+	assert.Equal(t, "188.33.44.66", cfg.Server.Host)
+	assert.Equal(t, "9876", cfg.Server.Port)
+
+	assert.Equal(t, "sqlstorage", cfg.Storage.Type)
+
+	assert.Equal(t, "localhost", cfg.SQLStorage.Host)
+	assert.Equal(t, 5432, cfg.SQLStorage.Port)
+	assert.Equal(t, "calendar", cfg.SQLStorage.Database)
+	assert.Equal(t, "calendar_user", cfg.SQLStorage.Username)
+	assert.Equal(t, "calendar_pass", cfg.SQLStorage.Password)
+}
+
+func TestLoadFullApplicationConfigWithInMemoryStorage(t *testing.T) {
+	fullJSON := `
+	{
+		"logger": {
+			"level": "info",
+			"file": "calendar.log"
+		},
+		"server": {
+			"host": "188.33.44.66",
+			"port": "9876"
+		},
+		"storage": { 
+			"type" : "inmemory" 
+		}
+	}`
+
+	tmpFile := createTempFile(t, fullJSON)
+	defer os.Remove(tmpFile.Name())
+
+	cfg, err := LoadConfig(tmpFile.Name())
+
+	assert.Nil(t, err)
+	assert.Equal(t, "info", cfg.Logger.Level)
+	assert.Equal(t, "calendar.log", cfg.Logger.File)
+
+	assert.Equal(t, "188.33.44.66", cfg.Server.Host)
+	assert.Equal(t, "9876", cfg.Server.Port)
+
+	assert.Equal(t, "inmemory", cfg.Storage.Type)
+}
+
 func TestLoadConfig(t *testing.T) {
 	t.Run("empty JSON: expected default", func(t *testing.T) {
 		emptyJSON := `{}`
