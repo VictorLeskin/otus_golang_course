@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package calendar;
 
-option go_package = "./api/pb/calendar;calendar";
+option go_package = "./calendar;calendar";
 
 import "google/protobuf/timestamp.proto";
 
@@ -13,4 +13,8 @@ message Event {
     google.protobuf.Timestamp start_time = 4;
     google.protobuf.Timestamp end_time = 5;
     string user_id = 6;
+}
+
+service CalendarService {
+    // ѕока пусто, но нужно дл€ генерации grpc кода
 }
