@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockReadCloser replace io.ReadCloser.
+// MockReadCloser replace io.ReadCloser .
 
 type MockReadCloser struct {
 	closed   bool
