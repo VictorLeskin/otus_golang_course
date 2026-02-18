@@ -1,6 +1,34 @@
 package main
 
+import (
+	"flag"
+	"fmt"
+	"os"
+	"strconv"
+)
+
 func main() {
-	// Place your code here,
-	// P.S. Do not rush to throw context down, think think if it is useful with blocking operation?
+	SetupCommandLineParameters()
+
+	params, err := ParseCommandLine()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	client := NewTelnetClient(
+		params.host+":"+strconv.Itoa(params.port),
+		params.timeout,
+		os.Stdin,
+		os.Stdout)
+
+	if c, ok := client.(*MyTelnetClient); ok {
+		if err := c.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	os.Exit(0)
 }
