@@ -18,7 +18,9 @@ linters-settings:
           - $gostd
           - golang.org/x/example/hello/reverse
           - calendar/internal
+          - calendar/api/pb/calendar
           - github.com/lib/pq
+          - google.golang.org/protobuf/types/known/timestamppb
       Test:
         files:
           - $test

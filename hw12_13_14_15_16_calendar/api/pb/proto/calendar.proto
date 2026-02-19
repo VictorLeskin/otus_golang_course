@@ -17,11 +17,7 @@ message Event {
 
 // requests are the input parameters of the Storage interface functions.
 message CreateEventRequest{
-    string title = 2;
-    string description = 3;
-    google.protobuf.Timestamp start_time = 4;
-    google.protobuf.Timestamp end_time = 5;
-    string user_id = 6;
+  Event event = 1;
 }
 
 message UpdateEventRequest{
@@ -52,12 +48,11 @@ message UpdateEventResponse{
 }
 
 message DeleteEventResponse{
-  string id = 1;
   string error_message  = 2;
 }
 
 message GetEventResponse{
-  string id = 1;
+  Event event = 1;
   string error_message  = 2;
 }
 
@@ -66,6 +61,12 @@ message ListEventsResponse{
   string error_message  = 2;
 }
 
+
+// service ( duplicte Storage interface )
 service CalendarService {
-    // Пока пусто, но нужно для генерации grpc кода
+    rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
+    rpc UpdateEvent(UpdateEventRequest) returns (UpdateEventResponse);
+    rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse);
+    rpc GetEvent(GetEventRequest) returns (GetEventResponse);
+    rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
 }

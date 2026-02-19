@@ -109,11 +109,7 @@ func (x *Event) GetUserId() string {
 // requests are the input parameters of the Storage interface functions.
 type CreateEventRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	StartTime     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
-	EndTime       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
-	UserId        string                 `protobuf:"bytes,6,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Event         *Event                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -148,39 +144,11 @@ func (*CreateEventRequest) Descriptor() ([]byte, []int) {
 	return file_calendar_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *CreateEventRequest) GetTitle() string {
+func (x *CreateEventRequest) GetEvent() *Event {
 	if x != nil {
-		return x.Title
-	}
-	return ""
-}
-
-func (x *CreateEventRequest) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *CreateEventRequest) GetStartTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.StartTime
+		return x.Event
 	}
 	return nil
-}
-
-func (x *CreateEventRequest) GetEndTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.EndTime
-	}
-	return nil
-}
-
-func (x *CreateEventRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
 }
 
 type UpdateEventRequest struct {
@@ -466,7 +434,6 @@ func (x *UpdateEventResponse) GetErrorMessage() string {
 
 type DeleteEventResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ErrorMessage  string                 `protobuf:"bytes,2,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -502,13 +469,6 @@ func (*DeleteEventResponse) Descriptor() ([]byte, []int) {
 	return file_calendar_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *DeleteEventResponse) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
 func (x *DeleteEventResponse) GetErrorMessage() string {
 	if x != nil {
 		return x.ErrorMessage
@@ -518,7 +478,7 @@ func (x *DeleteEventResponse) GetErrorMessage() string {
 
 type GetEventResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Event         *Event                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
 	ErrorMessage  string                 `protobuf:"bytes,2,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -554,11 +514,11 @@ func (*GetEventResponse) Descriptor() ([]byte, []int) {
 	return file_calendar_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *GetEventResponse) GetId() string {
+func (x *GetEventResponse) GetEvent() *Event {
 	if x != nil {
-		return x.Id
+		return x.Event
 	}
-	return ""
+	return nil
 }
 
 func (x *GetEventResponse) GetErrorMessage() string {
@@ -632,14 +592,9 @@ const file_calendar_proto_rawDesc = "" +
 	"\n" +
 	"start_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
 	"\bend_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12\x17\n" +
-	"\auser_id\x18\x06 \x01(\tR\x06userId\"\xd7\x01\n" +
-	"\x12CreateEventRequest\x12\x14\n" +
-	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x129\n" +
-	"\n" +
-	"start_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
-	"\bend_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12\x17\n" +
 	"\auser_id\x18\x06 \x01(\tR\x06userId\";\n" +
+	"\x12CreateEventRequest\x12%\n" +
+	"\x05event\x18\x01 \x01(\v2\x0f.calendar.EventR\x05event\";\n" +
 	"\x12UpdateEventRequest\x12%\n" +
 	"\x05event\x18\x01 \x01(\v2\x0f.calendar.EventR\x05event\"$\n" +
 	"\x12DeleteEventRequest\x12\x0e\n" +
@@ -653,17 +608,22 @@ const file_calendar_proto_rawDesc = "" +
 	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage\"a\n" +
 	"\x13UpdateEventResponse\x12%\n" +
 	"\x05event\x18\x01 \x01(\v2\x0f.calendar.EventR\x05event\x12#\n" +
-	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage\"J\n" +
-	"\x13DeleteEventResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
-	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage\"G\n" +
-	"\x10GetEventResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage\":\n" +
+	"\x13DeleteEventResponse\x12#\n" +
+	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage\"^\n" +
+	"\x10GetEventResponse\x12%\n" +
+	"\x05event\x18\x01 \x01(\v2\x0f.calendar.EventR\x05event\x12#\n" +
 	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage\"b\n" +
 	"\x12ListEventsResponse\x12'\n" +
 	"\x06events\x18\x01 \x03(\v2\x0f.calendar.EventR\x06events\x12#\n" +
-	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage2\x11\n" +
-	"\x0fCalendarServiceB\x15Z\x13./calendar;calendarb\x06proto3"
+	"\rerror_message\x18\x02 \x01(\tR\ferrorMessage2\x81\x03\n" +
+	"\x0fCalendarService\x12J\n" +
+	"\vCreateEvent\x12\x1c.calendar.CreateEventRequest\x1a\x1d.calendar.CreateEventResponse\x12J\n" +
+	"\vUpdateEvent\x12\x1c.calendar.UpdateEventRequest\x1a\x1d.calendar.UpdateEventResponse\x12J\n" +
+	"\vDeleteEvent\x12\x1c.calendar.DeleteEventRequest\x1a\x1d.calendar.DeleteEventResponse\x12A\n" +
+	"\bGetEvent\x12\x19.calendar.GetEventRequest\x1a\x1a.calendar.GetEventResponse\x12G\n" +
+	"\n" +
+	"ListEvents\x12\x1b.calendar.ListEventsRequest\x1a\x1c.calendar.ListEventsResponseB\x15Z\x13./calendar;calendarb\x06proto3"
 
 var (
 	file_calendar_proto_rawDescOnce sync.Once
@@ -695,14 +655,24 @@ var file_calendar_proto_goTypes = []any{
 var file_calendar_proto_depIdxs = []int32{
 	11, // 0: calendar.Event.start_time:type_name -> google.protobuf.Timestamp
 	11, // 1: calendar.Event.end_time:type_name -> google.protobuf.Timestamp
-	11, // 2: calendar.CreateEventRequest.start_time:type_name -> google.protobuf.Timestamp
-	11, // 3: calendar.CreateEventRequest.end_time:type_name -> google.protobuf.Timestamp
-	0,  // 4: calendar.UpdateEventRequest.event:type_name -> calendar.Event
-	0,  // 5: calendar.CreateEventResponse.event:type_name -> calendar.Event
-	0,  // 6: calendar.UpdateEventResponse.event:type_name -> calendar.Event
+	0,  // 2: calendar.CreateEventRequest.event:type_name -> calendar.Event
+	0,  // 3: calendar.UpdateEventRequest.event:type_name -> calendar.Event
+	0,  // 4: calendar.CreateEventResponse.event:type_name -> calendar.Event
+	0,  // 5: calendar.UpdateEventResponse.event:type_name -> calendar.Event
+	0,  // 6: calendar.GetEventResponse.event:type_name -> calendar.Event
 	0,  // 7: calendar.ListEventsResponse.events:type_name -> calendar.Event
-	8,  // [8:8] is the sub-list for method output_type
-	8,  // [8:8] is the sub-list for method input_type
+	1,  // 8: calendar.CalendarService.CreateEvent:input_type -> calendar.CreateEventRequest
+	2,  // 9: calendar.CalendarService.UpdateEvent:input_type -> calendar.UpdateEventRequest
+	3,  // 10: calendar.CalendarService.DeleteEvent:input_type -> calendar.DeleteEventRequest
+	4,  // 11: calendar.CalendarService.GetEvent:input_type -> calendar.GetEventRequest
+	5,  // 12: calendar.CalendarService.ListEvents:input_type -> calendar.ListEventsRequest
+	6,  // 13: calendar.CalendarService.CreateEvent:output_type -> calendar.CreateEventResponse
+	7,  // 14: calendar.CalendarService.UpdateEvent:output_type -> calendar.UpdateEventResponse
+	8,  // 15: calendar.CalendarService.DeleteEvent:output_type -> calendar.DeleteEventResponse
+	9,  // 16: calendar.CalendarService.GetEvent:output_type -> calendar.GetEventResponse
+	10, // 17: calendar.CalendarService.ListEvents:output_type -> calendar.ListEventsResponse
+	13, // [13:18] is the sub-list for method output_type
+	8,  // [8:13] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name
 	8,  // [8:8] is the sub-list for extension extendee
 	0,  // [0:8] is the sub-list for field type_name
