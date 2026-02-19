@@ -15,6 +15,57 @@ message Event {
     string user_id = 6;
 }
 
+// requests are the input parameters of the Storage interface functions.
+message CreateEventRequest{
+    string title = 2;
+    string description = 3;
+    google.protobuf.Timestamp start_time = 4;
+    google.protobuf.Timestamp end_time = 5;
+    string user_id = 6;
+}
+
+message UpdateEventRequest{
+  Event event = 1;
+}
+
+message DeleteEventRequest{
+  string id = 1;
+}
+
+message GetEventRequest{
+  string id = 1;
+}
+
+message ListEventsRequest{
+  string id = 1;
+}
+
+// responses are the return parameter of the Storage interface functions.
+message CreateEventResponse{
+  Event event = 1;
+  string error_message = 2; // error message in case of failed response, "" otherwise
+}
+
+message UpdateEventResponse{
+  Event event = 1;
+  string error_message  = 2;
+}
+
+message DeleteEventResponse{
+  string id = 1;
+  string error_message  = 2;
+}
+
+message GetEventResponse{
+  string id = 1;
+  string error_message  = 2;
+}
+
+message ListEventsResponse{
+  repeated Event events = 1; 
+  string error_message  = 2;
+}
+
 service CalendarService {
-    // Пока пусто, но нужно для генерации grpc кода
+    // РџРѕРєР° РїСѓСЃС‚Рѕ, РЅРѕ РЅСѓР¶РЅРѕ РґР»СЏ РіРµРЅРµСЂР°С†РёРё grpc РєРѕРґР°
 }
