@@ -1,24 +1,28 @@
 package app
 
 import (
+	"calendar/internal/logger"
+	"calendar/internal/storage"
 	"context"
 )
 
 type App struct { // TODO
+	Logger  *logger.Logger
+	Storage storage.Storage
 }
 
-type Logger interface { // TODO
-}
-
-type Storage interface { // TODO
-}
-
-func New(logger Logger, storage Storage) *App {
-	return &App{}
+func New(logger *logger.Logger, storage storage.Storage) *App {
+	return &App{
+		Logger:  logger,
+		Storage: storage,
+	}
 }
 
 func (a *App) CreateEvent(ctx context.Context, id, title string) error {
 	// TODO
+	_ = ctx
+	_ = id
+	_ = title
 	return nil
 	// return a.storage.CreateEvent(storage.Event{ID: id, Title: title})
 }
