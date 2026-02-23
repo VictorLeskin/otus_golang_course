@@ -82,3 +82,26 @@ func (s *Server) CreateEvent(ctx context.Context,
 	s.LogCalendarEvent("Create", "Response", resp.Event)
 	return resp, nil
 }
+
+func (s *Server) UpdateEvent(ctx context.Context,
+	req *calendar.UpdateEventRequest) (*calendar.UpdateEventResponse, error) {
+	s.LogCalendarEvent("Update", "Request", req.Event)
+
+	event := convertFromPBEvent(req.Event)
+
+	err := s.storage.UpdateEvent(ctx, event)
+	if err != nil {
+		s.LogError("Update", err)
+		return &calendar.UpdateEventResponse{
+			Event:        nil,
+			ErrorMessage: err.Error(),
+		}, err
+	}
+
+	resp := &calendar.UpdateEventResponse{
+		Event: convertToPBEvent(event),
+	}
+
+	s.LogCalendarEvent("Update", "Response", resp.Event)
+	return resp, nil
+}
