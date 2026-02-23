@@ -48,7 +48,7 @@ func convertToPBEvent(from *storage.Event) *calendar.Event {
 }
 
 func (s *Server) LogCalendarEvent(method string, stage string, event *calendar.Event) {
-	s.logger.Infof("gRPC %s/%s Id: %s Title: %q Description: %q StartTime:%s EndTime:%s UserId: %s\n",
+	s.logger.Infof("gRPC %s/%s Id: %s Title: %q Description: %q StartTime:%s EndTime:%s UserId: %s",
 		method, stage,
 		event.Id, event.Title, event.Description,
 		event.StartTime.AsTime().Format(time.RFC3339),
@@ -58,6 +58,14 @@ func (s *Server) LogCalendarEvent(method string, stage string, event *calendar.E
 
 func (s *Server) LogError(method string, err error) {
 	s.logger.Infof("gRPC %s Error: %s", method, err.Error())
+}
+
+func (s *Server) LogDeleteRequest(req *calendar.DeleteEventRequest) {
+	s.logger.Infof("gRPC Delete/Request Id: %s", req.Id)
+}
+
+func (s *Server) LogDeleteResponse(req *calendar.DeleteEventRequest) {
+	s.logger.Infof("gRPC Delete/Response Id: %s", req.Id)
 }
 
 func (s *Server) CreateEvent(ctx context.Context,
@@ -103,5 +111,23 @@ func (s *Server) UpdateEvent(ctx context.Context,
 	}
 
 	s.LogCalendarEvent("Update", "Response", resp.Event)
+	return resp, nil
+}
+
+func (s *Server) DeleteEvent(ctx context.Context,
+	req *calendar.DeleteEventRequest) (*calendar.DeleteEventResponse, error) {
+	s.LogDeleteRequest(req)
+
+	err := s.storage.DeleteEvent(ctx, req.Id)
+	if err != nil {
+		s.LogError("Delete", err)
+		return &calendar.DeleteEventResponse{
+			ErrorMessage: err.Error(),
+		}, err
+	}
+
+	resp := &calendar.DeleteEventResponse{}
+
+	s.LogDeleteResponse(req)
 	return resp, nil
 }

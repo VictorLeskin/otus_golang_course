@@ -18,6 +18,7 @@ import (
 type MockStorage struct {
 	CreateEventFunc func(ctx context.Context, event *storage.Event) error
 	UpdateEventFunc func(ctx context.Context, event *storage.Event) error
+	DeleteEventFunc func(ctx context.Context, id string) error
 	// остальные методы можно добавить по необходимости
 }
 
@@ -52,6 +53,9 @@ func (m *MockStorage) GetEvent(ctx context.Context, id string) (*storage.Event, 
 	return nil, nil
 }
 func (m *MockStorage) DeleteEvent(ctx context.Context, id string) error {
+	if m.DeleteEventFunc != nil {
+		return m.DeleteEventFunc(ctx, id)
+	}
 	return nil
 }
 func (m *MockStorage) ListEvents(ctx context.Context, userID string) ([]*storage.Event, error) {
@@ -160,6 +164,36 @@ func TestLogCalendarEvent(t *testing.T) {
 	for _, part := range expectedParts {
 		assert.Contains(t, t0.buf.String(), part)
 	}
+}
+
+func TestLogDeleteRequest(t *testing.T) {
+	t0 := NewMockLogger()
+
+	server := &Server{
+		logger: t0.logger,
+	}
+
+	req := &calendar.DeleteEventRequest{
+		Id: "id1",
+	}
+	server.LogDeleteRequest(req)
+
+	assert.Equal(t, "[I] gRPC Delete/Request Id: id1\n", t0.buf.String())
+}
+
+func TestLogDeleteResponse(t *testing.T) {
+	t0 := NewMockLogger()
+
+	server := &Server{
+		logger: t0.logger,
+	}
+
+	req := &calendar.DeleteEventRequest{
+		Id: "id1",
+	}
+	server.LogDeleteResponse(req)
+
+	assert.Equal(t, "[I] gRPC Delete/Response Id: id1\n", t0.buf.String())
 }
 
 func TestCreateEvent_Success(t *testing.T) {
@@ -334,4 +368,70 @@ func TestUpdateEvent_StorageError(t *testing.T) {
 	assert.Contains(t, logOutput, "Update Error")
 	assert.Contains(t, logOutput, "database connection failed")
 	assert.NotContains(t, logOutput, "Update/Response")
+}
+
+// DeleteEvent
+func TestDeleteEvent_Success(t *testing.T) {
+	t0 := NewMockLogger()
+
+	mockStorage := &MockStorage{
+		DeleteEventFunc: func(ctx context.Context, id string) error {
+			_ = ctx
+			_ = id
+			return nil
+		},
+	}
+
+	server := &Server{
+		storage: mockStorage,
+		logger:  t0.logger,
+	}
+
+	req := &calendar.DeleteEventRequest{
+		Id: "id-225",
+	}
+
+	resp, err := server.DeleteEvent(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	// Проверка логов
+	assert.Equal(t, "[I] gRPC Delete/Request Id: id-225\n"+
+		"[I] gRPC Delete/Response Id: id-225\n", t0.buf.String())
+}
+
+func TestDeleteEvent_StorageError(t *testing.T) {
+	t0 := NewMockLogger()
+
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		DeleteEventFunc: func(ctx context.Context, id string) error {
+			_ = ctx
+			_ = id
+			return expectedErr
+		},
+	}
+
+	server := &Server{
+		storage: mockStorage,
+		logger:  t0.logger,
+	}
+
+	req := &calendar.DeleteEventRequest{
+		Id: "id-225",
+	}
+
+	resp, err := server.DeleteEvent(context.Background(), req)
+
+	// Проверки
+	assert.Error(t, err)
+	assert.Equal(t, expectedErr, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, resp.ErrorMessage)
+	assert.Equal(t, expectedErr.Error(), resp.ErrorMessage)
+
+	// Проверка логов
+	assert.Equal(t, "[I] gRPC Delete/Request Id: id-225\n"+
+		"[I] gRPC Delete Error: database connection failed\n", t0.buf.String())
 }
