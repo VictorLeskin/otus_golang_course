@@ -17,6 +17,7 @@ import (
 // internal/server/grpc/mock_storage_test.go
 type MockStorage struct {
 	CreateEventFunc func(ctx context.Context, event *storage.Event) error
+	UpdateEventFunc func(ctx context.Context, event *storage.Event) error
 	// остальные методы можно добавить по необходимости
 }
 
@@ -39,12 +40,16 @@ func (m *MockStorage) CreateEvent(ctx context.Context, event *storage.Event) err
 	return nil
 }
 
+func (m *MockStorage) UpdateEvent(ctx context.Context, event *storage.Event) error {
+	if m.UpdateEventFunc != nil {
+		return m.UpdateEventFunc(ctx, event)
+	}
+	return nil
+}
+
 // Заглушки для остальных методов интерфейса (чтобы MockStorage удовлетворял интерфейсу)
 func (m *MockStorage) GetEvent(ctx context.Context, id string) (*storage.Event, error) {
 	return nil, nil
-}
-func (m *MockStorage) UpdateEvent(ctx context.Context, event *storage.Event) error {
-	return nil
 }
 func (m *MockStorage) DeleteEvent(ctx context.Context, id string) error {
 	return nil
@@ -241,4 +246,92 @@ func TestCreateEvent_StorageError(t *testing.T) {
 	assert.Contains(t, logOutput, "Create Error")
 	assert.Contains(t, logOutput, "database connection failed")
 	assert.NotContains(t, logOutput, "Create/Response")
+}
+
+// UpdateEvent
+func TestUpdateEvent_Success(t *testing.T) {
+	t0 := NewMockLogger()
+
+	mockStorage := &MockStorage{
+		UpdateEventFunc: func(ctx context.Context, event *storage.Event) error {
+			event.Description += " :updated"
+			return nil
+		},
+	}
+
+	server := &Server{
+		storage: mockStorage,
+		logger:  t0.logger,
+	}
+
+	req := &calendar.UpdateEventRequest{
+		Event: &calendar.Event{
+			Id:          "id-12222",
+			Title:       "Test Event",
+			Description: "Test Description",
+			StartTime:   timestamppb.New(time.Date(2026, 2, 23, 15, 30, 0, 0, time.UTC)),
+			EndTime:     timestamppb.New(time.Date(2026, 2, 23, 16, 0, 0, 0, time.UTC)),
+			UserId:      "user-123",
+		},
+	}
+
+	resp, err := server.UpdateEvent(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, resp.Event)
+	assert.Equal(t, "id-12222", resp.Event.Id)
+	assert.Equal(t, "Test Event", resp.Event.Title)
+	assert.Equal(t, "Test Description :updated", resp.Event.Description)
+	assert.Equal(t, time.Date(2026, time.February, 23, 15, 30, 0, 0, time.UTC), resp.Event.StartTime.AsTime())
+	assert.Equal(t, time.Date(2026, time.February, 23, 16, 0, 0, 0, time.UTC), resp.Event.EndTime.AsTime())
+	assert.Equal(t, "user-123", resp.Event.UserId)
+
+	// Проверка логов
+	assert.True(t, strings.HasPrefix(t0.buf.String(), "[I] gRPC Update/Request"))
+	assert.True(t, strings.Contains(t0.buf.String(), "[I] gRPC Update/Response"))
+}
+
+func TestUpdateEvent_StorageError(t *testing.T) {
+	t0 := NewMockLogger()
+
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		UpdateEventFunc: func(ctx context.Context, event *storage.Event) error {
+			return expectedErr
+		},
+	}
+
+	server := &Server{
+		storage: mockStorage,
+		logger:  t0.logger,
+	}
+
+	// Подготовка запроса
+	req := &calendar.UpdateEventRequest{
+		Event: &calendar.Event{
+			Title:       "Test Event",
+			Description: "Test Description",
+			StartTime:   timestamppb.New(time.Date(2026, 2, 23, 15, 30, 0, 0, time.UTC)),
+			EndTime:     timestamppb.New(time.Date(2026, 2, 23, 16, 0, 0, 0, time.UTC)),
+			UserId:      "user-123",
+		},
+	}
+
+	// Вызов
+	resp, err := server.UpdateEvent(context.Background(), req)
+
+	// Проверки
+	assert.Error(t, err)
+	assert.Equal(t, expectedErr, err)
+	assert.NotNil(t, resp)
+	assert.Nil(t, resp.Event)
+	assert.Equal(t, expectedErr.Error(), resp.ErrorMessage)
+
+	// Проверка логов
+	logOutput := t0.buf.String()
+	assert.Contains(t, logOutput, "Update/Request")
+	assert.Contains(t, logOutput, "Update Error")
+	assert.Contains(t, logOutput, "database connection failed")
+	assert.NotContains(t, logOutput, "Update/Response")
 }
