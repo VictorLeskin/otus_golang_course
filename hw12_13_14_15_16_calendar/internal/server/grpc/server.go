@@ -2,9 +2,10 @@ package grpc
 
 import (
 	"context"
-	"log/slog"
+	"time"
 
-	"calendar/api/pb/calendar"  // geerated code
+	"calendar/api/pb/calendar" // geerated code
+	"calendar/internal/logger"
 	"calendar/internal/storage" // storage.Storage interface
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -14,10 +15,10 @@ import (
 type Server struct {
 	calendar.UnimplementedCalendarServiceServer
 	storage storage.Storage
-	logger  *slog.Logger
+	logger  *logger.Logger
 }
 
-func New(storage storage.Storage, logger *slog.Logger) *Server {
+func New(storage storage.Storage, logger *logger.Logger) *Server {
 	return &Server{
 		storage: storage,
 		logger:  logger,
@@ -46,19 +47,38 @@ func convertToPBEvent(from *storage.Event) *calendar.Event {
 	}
 }
 
+func (s *Server) LogCalendarEvent(method string, stage string, event *calendar.Event) {
+	s.logger.Infof("gRPC %s/%s Id: %s Title: %q Description: %q StartTime:%s EndTime:%s UserId: %s\n",
+		method, stage,
+		event.Id, event.Title, event.Description,
+		event.StartTime.AsTime().Format(time.RFC3339),
+		event.EndTime.AsTime().Format(time.RFC3339),
+		event.UserId)
+}
+
+func (s *Server) LogError(method string, err error) {
+	s.logger.Infof("gRPC %s Error: %s", method, err.Error())
+}
+
 func (s *Server) CreateEvent(ctx context.Context,
 	req *calendar.CreateEventRequest) (*calendar.CreateEventResponse, error) {
+	s.LogCalendarEvent("Create", "Request", req.Event)
+
 	event := convertFromPBEvent(req.Event)
 
 	err := s.storage.CreateEvent(ctx, event)
 	if err != nil {
+		s.LogError("Create", err)
 		return &calendar.CreateEventResponse{
 			Event:        nil,
 			ErrorMessage: err.Error(),
 		}, err
 	}
 
-	return &calendar.CreateEventResponse{
+	resp := &calendar.CreateEventResponse{
 		Event: convertToPBEvent(event),
-	}, nil
+	}
+
+	s.LogCalendarEvent("Create", "Response", resp.Event)
+	return resp, nil
 }
