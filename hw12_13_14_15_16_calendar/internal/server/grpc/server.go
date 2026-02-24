@@ -68,6 +68,25 @@ func (s *Server) LogDeleteResponse(req *calendar.DeleteEventRequest) {
 	s.logger.Infof("gRPC Delete/Response Id: %s", req.Id)
 }
 
+func (s *Server) LogGetRequest(req *calendar.GetEventRequest) {
+	s.logger.Infof("gRPC Get/Request Id: %s", req.Id)
+}
+
+func (s *Server) LogListEventsRequest(req *calendar.ListEventsRequest) {
+	s.logger.Infof("gRPC ListEvents/Request Id: %s", req.Id)
+}
+
+func (s *Server) LogListEventsResponse(resp *calendar.ListEventsResponse) {
+	s.logger.Infof("gRPC ListEvents/Response cnt: %d", len(resp.Events))
+	for _, event := range resp.Events {
+		s.logger.Infof("Id: %s Title: %q Description: %q StartTime:%s EndTime:%s UserId: %s",
+			event.Id, event.Title, event.Description,
+			event.StartTime.AsTime().Format(time.RFC3339),
+			event.EndTime.AsTime().Format(time.RFC3339),
+			event.UserId)
+	}
+}
+
 func (s *Server) CreateEvent(ctx context.Context,
 	req *calendar.CreateEventRequest) (*calendar.CreateEventResponse, error) {
 	s.LogCalendarEvent("Create", "Request", req.Event)
@@ -129,5 +148,49 @@ func (s *Server) DeleteEvent(ctx context.Context,
 	resp := &calendar.DeleteEventResponse{}
 
 	s.LogDeleteResponse(req)
+	return resp, nil
+}
+
+func (s *Server) GetEvent(ctx context.Context,
+	req *calendar.GetEventRequest) (*calendar.GetEventResponse, error) {
+	s.LogGetRequest(req)
+
+	event, err := s.storage.GetEvent(ctx, req.Id)
+	if err != nil {
+		s.LogError("Get", err)
+		return &calendar.GetEventResponse{
+			Event:        nil,
+			ErrorMessage: err.Error(),
+		}, err
+	}
+
+	resp := &calendar.GetEventResponse{
+		Event: convertToPBEvent(event),
+	}
+
+	s.LogCalendarEvent("Get", "Response", resp.Event)
+	return resp, nil
+}
+
+func (s *Server) ListEvents(ctx context.Context,
+	req *calendar.ListEventsRequest) (*calendar.ListEventsResponse, error) {
+	s.LogListEventsRequest(req)
+
+	events, err := s.storage.ListEvents(ctx, req.Id)
+	if err != nil {
+		s.LogError("ListEvents", err)
+		return &calendar.ListEventsResponse{
+			Events:       nil,
+			ErrorMessage: err.Error(),
+		}, err
+	}
+
+	resp := &calendar.ListEventsResponse{}
+
+	for _, event := range events {
+		resp.Events = append(resp.Events, convertToPBEvent(event))
+	}
+
+	s.LogListEventsResponse(resp)
 	return resp, nil
 }

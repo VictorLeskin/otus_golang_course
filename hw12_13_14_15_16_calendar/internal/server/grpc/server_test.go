@@ -14,15 +14,16 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// internal/server/grpc/mock_storage_test.go
+// internal/server/grpc/mock_storage_test.go ...
 type MockStorage struct {
 	CreateEventFunc func(ctx context.Context, event *storage.Event) error
 	UpdateEventFunc func(ctx context.Context, event *storage.Event) error
 	DeleteEventFunc func(ctx context.Context, id string) error
-	// остальные методы можно добавить по необходимости
+	GetEventFunc    func(ctx context.Context, id string) (*storage.Event, error)
+	ListEventsFunc  func(ctx context.Context, userId string) ([]*storage.Event, error)
 }
 
-// MockLogger обёртка над logger.NewWriterLogger для тестов
+// MockLogger обёртка над logger.NewWriterLogger для тестов.
 type MockLogger struct {
 	buf    strings.Builder
 	logger *logger.Logger
@@ -48,22 +49,29 @@ func (m *MockStorage) UpdateEvent(ctx context.Context, event *storage.Event) err
 	return nil
 }
 
-// Заглушки для остальных методов интерфейса (чтобы MockStorage удовлетворял интерфейсу)
 func (m *MockStorage) GetEvent(ctx context.Context, id string) (*storage.Event, error) {
+	if m.GetEventFunc != nil {
+		return m.GetEventFunc(ctx, id)
+	}
 	return nil, nil
 }
+
 func (m *MockStorage) DeleteEvent(ctx context.Context, id string) error {
 	if m.DeleteEventFunc != nil {
 		return m.DeleteEventFunc(ctx, id)
 	}
 	return nil
 }
+
 func (m *MockStorage) ListEvents(ctx context.Context, userID string) ([]*storage.Event, error) {
+	if m.ListEventsFunc != nil {
+		return m.ListEventsFunc(ctx, userID)
+	}
 	return nil, nil
 }
 
 func TestConvertFromPBEvent(t *testing.T) {
-	// Создаем тестовые данные
+	// Создаем тестовые данные.
 	fixedTime := time.Date(2026, time.February, 23, 15, 30, 0, 0, time.UTC)
 
 	pbEvent := &calendar.Event{
@@ -75,10 +83,10 @@ func TestConvertFromPBEvent(t *testing.T) {
 		UserId:      "user-456",
 	}
 
-	// Вызываем тестируемую функцию
+	// Вызываем тестируемую функцию.
 	storageEvent := convertFromPBEvent(pbEvent)
 
-	// Проверяем все поля
+	// Проверяем все поля.
 	assert.Equal(t, "123", storageEvent.ID)
 	assert.Equal(t, "Test Event", storageEvent.Title)
 	assert.Equal(t, "Test Description", storageEvent.Description)
@@ -88,7 +96,7 @@ func TestConvertFromPBEvent(t *testing.T) {
 }
 
 func TestConvertToPBEvent(t *testing.T) {
-	// Создаем тестовые данные с фиксированными значениями
+	// Создаем тестовые данные с фиксированными значениями.
 	fixedTime := time.Date(2026, time.February, 23, 15, 30, 0, 0, time.UTC)
 
 	storageEvent := &storage.Event{
@@ -100,10 +108,10 @@ func TestConvertToPBEvent(t *testing.T) {
 		UserID:      "user-101",
 	}
 
-	// Вызываем тестируемую функцию
+	// Вызываем тестируемую функцию.
 	pbEvent := convertToPBEvent(storageEvent)
 
-	// Проверяем все поля через assert с КОНКРЕТНЫМИ значениями
+	// Проверяем все поля через assert с КОНКРЕТНЫМИ значениями.
 	assert.Equal(t, "event-789", pbEvent.Id)
 	assert.Equal(t, "Daily Standup", pbEvent.Title)
 	assert.Equal(t, "15-minute team sync", pbEvent.Description)
@@ -119,13 +127,13 @@ func TestLogError(t *testing.T) {
 		logger: t0.logger,
 	}
 
-	// Создаем тестовую ошибку
+	// Создаем тестовую ошибку.
 	testErr := fmt.Errorf("database connection failed")
 
-	// Вызываем тестируемую функцию
+	// Вызываем тестируемую функцию.
 	server.LogError("Create", testErr)
 
-	// Проверяем, что логгер получил сообщение
+	// Проверяем, что логгер получил сообщение.
 	assert.Equal(t, "[I] gRPC Create Error: database connection failed\n", t0.buf.String())
 }
 
@@ -136,7 +144,7 @@ func TestLogCalendarEvent(t *testing.T) {
 		logger: t0.logger,
 	}
 
-	// Создаем тестовое событие
+	// Создаем тестовое событие.
 	event := &calendar.Event{
 		Id:          "event-789",
 		Title:       "Daily Standup",
@@ -146,10 +154,10 @@ func TestLogCalendarEvent(t *testing.T) {
 		UserId:      "user-101",
 	}
 
-	// Вызываем тестируемую функцию
+	// Вызываем тестируемую функцию.
 	server.LogCalendarEvent("Create", "Request", event)
 
-	// Проверяем, что логгер получил сообщение
+	// Проверяем, что логгер получил сообщение.
 	assert.True(t, strings.HasPrefix(t0.buf.String(), "[I] gRPC Create/Request"))
 
 	expectedParts := []string{
@@ -200,8 +208,8 @@ func TestCreateEvent_Success(t *testing.T) {
 	t0 := NewMockLogger()
 
 	mockStorage := &MockStorage{
-		CreateEventFunc: func(ctx context.Context, event *storage.Event) error {
-			event.ID = "generated-id-123" // имитируем генерацию ID
+		CreateEventFunc: func(_ context.Context, event *storage.Event) error {
+			event.ID = "generated-id-123" // имитируем генерацию ID.
 			return nil
 		},
 	}
@@ -233,7 +241,7 @@ func TestCreateEvent_Success(t *testing.T) {
 	assert.Equal(t, time.Date(2026, time.February, 23, 16, 0, 0, 0, time.UTC), resp.Event.EndTime.AsTime())
 	assert.Equal(t, "user-123", resp.Event.UserId)
 
-	// Проверка логов
+	// Проверка логов.
 	assert.True(t, strings.HasPrefix(t0.buf.String(), "[I] gRPC Create/Request"))
 	assert.True(t, strings.Contains(t0.buf.String(), "[I] gRPC Create/Response"))
 }
@@ -243,7 +251,7 @@ func TestCreateEvent_StorageError(t *testing.T) {
 
 	expectedErr := fmt.Errorf("database connection failed")
 	mockStorage := &MockStorage{
-		CreateEventFunc: func(ctx context.Context, event *storage.Event) error {
+		CreateEventFunc: func(_ context.Context, _ *storage.Event) error {
 			return expectedErr
 		},
 	}
@@ -253,7 +261,7 @@ func TestCreateEvent_StorageError(t *testing.T) {
 		logger:  t0.logger,
 	}
 
-	// Подготовка запроса
+	// Подготовка запроса.
 	req := &calendar.CreateEventRequest{
 		Event: &calendar.Event{
 			Title:       "Test Event",
@@ -264,17 +272,15 @@ func TestCreateEvent_StorageError(t *testing.T) {
 		},
 	}
 
-	// Вызов
 	resp, err := server.CreateEvent(context.Background(), req)
 
-	// Проверки
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)
 	assert.NotNil(t, resp)
 	assert.Nil(t, resp.Event)
 	assert.Equal(t, expectedErr.Error(), resp.ErrorMessage)
 
-	// Проверка логов
+	// Проверка логов.
 	logOutput := t0.buf.String()
 	assert.Contains(t, logOutput, "Create/Request")
 	assert.Contains(t, logOutput, "Create Error")
@@ -282,12 +288,12 @@ func TestCreateEvent_StorageError(t *testing.T) {
 	assert.NotContains(t, logOutput, "Create/Response")
 }
 
-// UpdateEvent
+// ...UpdateEvent...
 func TestUpdateEvent_Success(t *testing.T) {
 	t0 := NewMockLogger()
 
 	mockStorage := &MockStorage{
-		UpdateEventFunc: func(ctx context.Context, event *storage.Event) error {
+		UpdateEventFunc: func(_ context.Context, event *storage.Event) error {
 			event.Description += " :updated"
 			return nil
 		},
@@ -321,7 +327,7 @@ func TestUpdateEvent_Success(t *testing.T) {
 	assert.Equal(t, time.Date(2026, time.February, 23, 16, 0, 0, 0, time.UTC), resp.Event.EndTime.AsTime())
 	assert.Equal(t, "user-123", resp.Event.UserId)
 
-	// Проверка логов
+	// Проверка логов.
 	assert.True(t, strings.HasPrefix(t0.buf.String(), "[I] gRPC Update/Request"))
 	assert.True(t, strings.Contains(t0.buf.String(), "[I] gRPC Update/Response"))
 }
@@ -331,7 +337,7 @@ func TestUpdateEvent_StorageError(t *testing.T) {
 
 	expectedErr := fmt.Errorf("database connection failed")
 	mockStorage := &MockStorage{
-		UpdateEventFunc: func(ctx context.Context, event *storage.Event) error {
+		UpdateEventFunc: func(_ context.Context, _ *storage.Event) error {
 			return expectedErr
 		},
 	}
@@ -341,7 +347,6 @@ func TestUpdateEvent_StorageError(t *testing.T) {
 		logger:  t0.logger,
 	}
 
-	// Подготовка запроса
 	req := &calendar.UpdateEventRequest{
 		Event: &calendar.Event{
 			Title:       "Test Event",
@@ -352,17 +357,15 @@ func TestUpdateEvent_StorageError(t *testing.T) {
 		},
 	}
 
-	// Вызов
 	resp, err := server.UpdateEvent(context.Background(), req)
 
-	// Проверки
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)
 	assert.NotNil(t, resp)
 	assert.Nil(t, resp.Event)
 	assert.Equal(t, expectedErr.Error(), resp.ErrorMessage)
 
-	// Проверка логов
+	// Проверка логов.
 	logOutput := t0.buf.String()
 	assert.Contains(t, logOutput, "Update/Request")
 	assert.Contains(t, logOutput, "Update Error")
@@ -370,14 +373,12 @@ func TestUpdateEvent_StorageError(t *testing.T) {
 	assert.NotContains(t, logOutput, "Update/Response")
 }
 
-// DeleteEvent
+// ...DeleteEvent...
 func TestDeleteEvent_Success(t *testing.T) {
 	t0 := NewMockLogger()
 
 	mockStorage := &MockStorage{
-		DeleteEventFunc: func(ctx context.Context, id string) error {
-			_ = ctx
-			_ = id
+		DeleteEventFunc: func(_ context.Context, _ string) error {
 			return nil
 		},
 	}
@@ -396,7 +397,7 @@ func TestDeleteEvent_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
-	// Проверка логов
+	// Проверка логов.
 	assert.Equal(t, "[I] gRPC Delete/Request Id: id-225\n"+
 		"[I] gRPC Delete/Response Id: id-225\n", t0.buf.String())
 }
@@ -406,9 +407,7 @@ func TestDeleteEvent_StorageError(t *testing.T) {
 
 	expectedErr := fmt.Errorf("database connection failed")
 	mockStorage := &MockStorage{
-		DeleteEventFunc: func(ctx context.Context, id string) error {
-			_ = ctx
-			_ = id
+		DeleteEventFunc: func(_ context.Context, _ string) error {
 			return expectedErr
 		},
 	}
@@ -424,14 +423,170 @@ func TestDeleteEvent_StorageError(t *testing.T) {
 
 	resp, err := server.DeleteEvent(context.Background(), req)
 
-	// Проверки
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)
 	assert.NotNil(t, resp)
 	assert.NotNil(t, resp.ErrorMessage)
 	assert.Equal(t, expectedErr.Error(), resp.ErrorMessage)
 
-	// Проверка логов
+	// Проверка логов.
 	assert.Equal(t, "[I] gRPC Delete/Request Id: id-225\n"+
 		"[I] gRPC Delete Error: database connection failed\n", t0.buf.String())
+}
+
+// ...GetEvent...
+func TestGetEvent_Success(t *testing.T) {
+	t0 := NewMockLogger()
+
+	mockStorage := &MockStorage{
+		GetEventFunc: func(_ context.Context, id string) (event *storage.Event, _ error) {
+			event = &storage.Event{
+				ID:          id,
+				Title:       "Test Event",
+				Description: "Test Description",
+				StartTime:   time.Date(2026, 2, 23, 15, 30, 0, 0, time.UTC),
+				EndTime:     time.Date(2026, 2, 23, 16, 0, 0, 0, time.UTC),
+				UserID:      "user-123",
+			}
+			return event, nil
+		},
+	}
+
+	server := &Server{
+		storage: mockStorage,
+		logger:  t0.logger,
+	}
+
+	req := &calendar.GetEventRequest{
+		Id: "id-225",
+	}
+
+	resp, err := server.GetEvent(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, resp.Event)
+	assert.Equal(t, "id-225", resp.Event.Id)
+	assert.Equal(t, "Test Event", resp.Event.Title)
+	assert.Equal(t, "Test Description", resp.Event.Description)
+	assert.Equal(t, time.Date(2026, time.February, 23, 15, 30, 0, 0, time.UTC), resp.Event.StartTime.AsTime())
+	assert.Equal(t, time.Date(2026, time.February, 23, 16, 0, 0, 0, time.UTC), resp.Event.EndTime.AsTime())
+	assert.Equal(t, "user-123", resp.Event.UserId)
+
+	// Проверка логов.
+	assert.True(t, strings.HasPrefix(t0.buf.String(), "[I] gRPC Get/Request"))
+	assert.True(t, strings.Contains(t0.buf.String(), "[I] gRPC Get/Response"))
+}
+
+func TestGetEvent_StorageError(t *testing.T) {
+	t0 := NewMockLogger()
+
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		GetEventFunc: func(_ context.Context, _ string) (*storage.Event, error) {
+			return nil, expectedErr
+		},
+	}
+
+	server := &Server{
+		storage: mockStorage,
+		logger:  t0.logger,
+	}
+
+	req := &calendar.GetEventRequest{
+		Id: "id-123",
+	}
+
+	resp, err := server.GetEvent(context.Background(), req)
+
+	assert.Error(t, err)
+	assert.Equal(t, expectedErr, err)
+	assert.NotNil(t, resp)
+	assert.Nil(t, resp.Event)
+	assert.Equal(t, expectedErr.Error(), resp.ErrorMessage)
+
+	// Проверка логов.
+	logOutput := t0.buf.String()
+	assert.Contains(t, logOutput, "Get/Request")
+	assert.Contains(t, logOutput, "Get Error")
+	assert.Contains(t, logOutput, "database connection failed")
+	assert.NotContains(t, logOutput, "Get/Response")
+}
+
+// ...ListEvents...
+func TestListEvents_Success(t *testing.T) {
+	t0 := NewMockLogger()
+
+	mockStorage := &MockStorage{
+		ListEventsFunc: func(_ context.Context, UserID string) (events []*storage.Event, _ error) {
+			event0 := &storage.Event{
+				ID:     "id-122",
+				UserID: UserID,
+			}
+			event1 := &storage.Event{
+				ID:     "id-777",
+				UserID: UserID,
+			}
+			events = append(events, event0)
+			events = append(events, event1)
+			return events, nil
+		},
+	}
+
+	server := &Server{
+		storage: mockStorage,
+		logger:  t0.logger,
+	}
+
+	req := &calendar.ListEventsRequest{
+		Id: "id-225",
+	}
+
+	resp, err := server.ListEvents(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, resp.Events)
+	assert.Equal(t, 2, len(resp.Events))
+	assert.Equal(t, "id-122", resp.Events[0].Id)
+	assert.Equal(t, "id-777", resp.Events[1].Id)
+
+	// Проверка логов.
+	assert.True(t, strings.HasPrefix(t0.buf.String(), "[I] gRPC ListEvents/Request"))
+	assert.True(t, strings.Contains(t0.buf.String(), "[I] gRPC ListEvents/Response"))
+}
+
+func TestListEvents_StorageError(t *testing.T) {
+	t0 := NewMockLogger()
+
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		ListEventsFunc: func(_ context.Context, _ string) (events []*storage.Event, _ error) {
+			return nil, expectedErr
+		},
+	}
+
+	server := &Server{
+		storage: mockStorage,
+		logger:  t0.logger,
+	}
+
+	req := &calendar.ListEventsRequest{
+		Id: "id-123",
+	}
+
+	resp, err := server.ListEvents(context.Background(), req)
+
+	assert.Error(t, err)
+	assert.Equal(t, expectedErr, err)
+	assert.NotNil(t, resp)
+	assert.Nil(t, resp.Events)
+	assert.Equal(t, expectedErr.Error(), resp.ErrorMessage)
+
+	// Проверка логов.
+	logOutput := t0.buf.String()
+	assert.Contains(t, logOutput, "ListEvents/Request")
+	assert.Contains(t, logOutput, "ListEvents Error")
+	assert.Contains(t, logOutput, "database connection failed")
+	assert.NotContains(t, logOutput, "ListEvents/Response")
 }
