@@ -54,14 +54,14 @@ func (s *Server) RegisterHandlers() {
 	mux.HandleFunc("/", s.handleHello)
 	mux.HandleFunc("/hello", s.handleHello)
 
-	// new API handlers
+	// new API handlers.
 	mux.HandleFunc("POST /events", s.handleCreateEvent)
 	mux.HandleFunc("GET /events/{id}", s.handleGetEvent)
 	mux.HandleFunc("PUT /events/{id}", s.handleUpdateEvent)
 	mux.HandleFunc("DELETE /events/{id}", s.handleDeleteEvent)
 	mux.HandleFunc("GET /events", s.handleListEvents)
 
-	// Health check для мониторинга
+	// Health check для мониторинга.
 	mux.HandleFunc("GET /health", s.handleHealth)
 
 	// Add logging before answer and after answer.
@@ -82,10 +82,10 @@ func (s *Server) GetHandler() http.Handler {
 
 // handleHello обработчик для hello-world.
 func (s *Server) handleHello(w http.ResponseWriter, r *http.Request) {
-	// Простой ответ
+	// Простой ответ.
 	response := "Hello, World!\n"
 
-	// to distinguish betwee /hello and just /
+	// to distinguish betwee /hello and just /.
 	if r.URL.Path == "/hello" {
 		response = "Hello from Calendar Service!\n"
 	}
@@ -97,8 +97,52 @@ func (s *Server) handleHello(w http.ResponseWriter, r *http.Request) {
 
 // handleCreateEvent — POST /events ...
 func (s *Server) handleCreateEvent(w http.ResponseWriter, r *http.Request) {
-	// TODO: имплементация
+	// 1. Читаем JSON из тела.
+	var req CreateEventRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.log.Infof("HTTP Create Error: invalid json %s", err.Error())
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	s.log.Infof("HTTP Create/Request: title=%q, user_id=%s", req.Title, req.UserID)
+
+	// 2. Преобразуем в storage.Event.
+	event := &storage.Event{
+		Title:       req.Title,
+		Description: req.Description,
+		StartTime:   req.StartTime,
+		EndTime:     req.EndTime,
+		UserID:      req.UserID,
+	}
+
+	// 3. Вызываем ТОТ ЖЕ storage, что и gRPC!.
+	err := s.storage.CreateEvent(r.Context(), event)
+	if err != nil {
+		// Возвращаем JSON с ошибкой.
+		s.log.Infof("HTTP Create Error: event creating failed %s", err.Error())
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// 4. Преобразуем в response DTO.
+	resp := EventResponse{
+		ID:          event.ID,
+		Title:       event.Title,
+		Description: event.Description,
+		StartTime:   event.StartTime,
+		EndTime:     event.EndTime,
+		UserID:      event.UserID,
+	}
+
+	s.log.Infof("HTTP Create/Response: title=%q, user_id=%s", req.Title, req.UserID)
+
+	// 4. Возвращаем JSON с созданным событием.
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
 }
 
 // handleGetEvent — GET /events/{id} ...
@@ -121,7 +165,7 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 	// TODO: имплементация
 }
 
-// handleHealth — проверка, что сервер жив
+// handleHealth — проверка, что сервер жив.
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

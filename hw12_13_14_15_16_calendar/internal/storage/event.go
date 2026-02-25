@@ -22,8 +22,8 @@ type Event struct {
 }
 
 type Storage interface {
-	CreateEvent(ctx context.Context, event *Event) error
 	UpdateEvent(ctx context.Context, event *Event) error
+	CreateEvent(ctx context.Context, event *Event) error
 	DeleteEvent(ctx context.Context, id string) error
 	GetEvent(ctx context.Context, id string) (*Event, error)
 	ListEvents(ctx context.Context, userID string) ([]*Event, error)

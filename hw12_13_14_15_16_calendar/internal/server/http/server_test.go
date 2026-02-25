@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"calendar/internal/app"
 	"calendar/internal/logger"
-	memorystorage "calendar/internal/storage/memory"
+	"calendar/internal/storage"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -74,26 +75,82 @@ func TestServer_Response(t *testing.T) {
 	}
 }
 
-func TestCreateEvent_Success(t *testing.T) {
-	// Сетап с реальным in-memory storage
-	store := memorystorage.New()
+// MockLogger обёртка над logger.NewWriterLogger для тестов.
+type MockLogger struct {
+	buf    strings.Builder
+	logger *logger.Logger
+}
 
-	logBuffer := &bytes.Buffer{}
-	log := logger.NewWriterLogger("debug", logBuffer)
+func NewMockLogger() *MockLogger {
+	ml := &MockLogger{}
+	ml.logger = logger.NewWriterLogger("info", &ml.buf)
+	return ml
+}
+
+// internal/server/grpc/mock_storage_test.go ...
+type MockStorage struct {
+	CreateEventFunc func(ctx context.Context, event *storage.Event) error
+	UpdateEventFunc func(ctx context.Context, event *storage.Event) error
+	DeleteEventFunc func(ctx context.Context, id string) error
+	GetEventFunc    func(ctx context.Context, id string) (*storage.Event, error)
+	ListEventsFunc  func(ctx context.Context, userId string) ([]*storage.Event, error)
+}
+
+func (m *MockStorage) CreateEvent(ctx context.Context, event *storage.Event) error {
+	if m.CreateEventFunc != nil {
+		return m.CreateEventFunc(ctx, event)
+	}
+	return nil
+}
+
+func (m *MockStorage) UpdateEvent(ctx context.Context, event *storage.Event) error {
+	if m.UpdateEventFunc != nil {
+		return m.UpdateEventFunc(ctx, event)
+	}
+	return nil
+}
+
+func (m *MockStorage) GetEvent(ctx context.Context, id string) (*storage.Event, error) {
+	if m.GetEventFunc != nil {
+		return m.GetEventFunc(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *MockStorage) DeleteEvent(ctx context.Context, id string) error {
+	if m.DeleteEventFunc != nil {
+		return m.DeleteEventFunc(ctx, id)
+	}
+	return nil
+}
+
+func (m *MockStorage) ListEvents(ctx context.Context, userID string) ([]*storage.Event, error) {
+	if m.ListEventsFunc != nil {
+		return m.ListEventsFunc(ctx, userID)
+	}
+	return nil, nil
+}
+
+func TestCreateEvent_Success(t *testing.T) {
+	t0 := NewMockLogger()
+	mockStorage := &MockStorage{
+		CreateEventFunc: func(_ context.Context, event *storage.Event) error {
+			event.ID = "generated-id-123" // имитируем генерацию ID.
+			return nil
+		},
+	}
 
 	mockApp := &app.App{
-		Logger: log,
+		Logger: t0.logger,
 	}
 
 	server := NewServer(Config{
 		Host: "localhost",
 		Port: "8080",
-	}, mockApp, store)
+	}, mockApp, mockStorage)
 
-	// Регистрируем хендлер
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /events", server.handleCreateEvent)
-	handler := LoggingMiddleware(log)(mux)
+	server.RegisterHandlers()
+	handler := server.GetHandler() // нужно добавить этот метод
 
 	// Подготовка запроса
 	reqBody := CreateEventRequest{
@@ -105,7 +162,8 @@ func TestCreateEvent_Success(t *testing.T) {
 	}
 
 	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", "/events", bytes.NewReader(bodyBytes))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST",
+		"/events", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
 	// Выполняем
@@ -118,11 +176,107 @@ func TestCreateEvent_Success(t *testing.T) {
 	var resp EventResponse
 	json.Unmarshal(rr.Body.Bytes(), &resp)
 
-	assert.NotEmpty(t, resp.ID)
+	assert.Equal(t, "generated-id-123", resp.ID)
 	assert.Equal(t, "Test Event", resp.Title)
+	assert.Equal(t, "Test Description", resp.Description)
+	assert.Equal(t, time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC), resp.StartTime)
+	assert.Equal(t, time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC), resp.EndTime)
+	assert.Equal(t, "user-123", resp.UserID)
 
-	// Проверяем, что в storage действительно появилась запись
-	savedEvent, err := store.GetEvent(context.Background(), resp.ID)
-	assert.NoError(t, err)
-	assert.Equal(t, resp.Title, savedEvent.Title)
+	assert.True(t, strings.Contains(t0.buf.String(), `[I] HTTP Create/Request: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(t0.buf.String(), `[I] HTTP Create/Response: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(t0.buf.String(), `[I] Request completed method: POST path: /events ip:  latency:`))
+
+	/*
+		logContent := t0.buf.String()
+		_ = os.WriteFile("test_logs.txt", []byte(logContent), 0644)
+	*/
+}
+
+func TestCreateEvent_JsonUnmarshallingError(t *testing.T) {
+	t0 := NewMockLogger()
+	mockStorage := &MockStorage{} // not need
+
+	mockApp := &app.App{
+		Logger: t0.logger,
+	}
+
+	server := NewServer(Config{
+		Host: "localhost",
+		Port: "8080",
+	}, mockApp, mockStorage)
+
+	server.RegisterHandlers()
+	handler := server.GetHandler() // нужно добавить этот метод
+
+	// Подготовка запроса
+	reqBody := CreateEventRequest{
+		Title:       "Test Event",
+		Description: "Test Description",
+		UserID:      "user-123",
+	}
+
+	bodyBytes, _ := json.Marshal(reqBody)
+	bodyBytes[0] = '[' // spoiling Json string replace first { at [
+	req, _ := http.NewRequestWithContext(context.Background(), "POST",
+		"/events", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+
+	assert.True(t, strings.Contains(t0.buf.String(), `[I] HTTP Create Error: invalid json`))
+	assert.True(t, strings.Contains(t0.buf.String(), `[I] Request completed method: POST path: /events ip:  latency:`))
+}
+
+func TestCreateEvent_EventCreatingFailure(t *testing.T) {
+	t0 := NewMockLogger()
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		CreateEventFunc: func(_ context.Context, _ *storage.Event) error {
+			return expectedErr
+		},
+	}
+
+	mockApp := &app.App{
+		Logger: t0.logger,
+	}
+
+	server := NewServer(Config{
+		Host: "localhost",
+		Port: "8080",
+	}, mockApp, mockStorage)
+
+	server.RegisterHandlers()
+	handler := server.GetHandler() // нужно добавить этот метод
+
+	// Подготовка запроса
+	reqBody := CreateEventRequest{
+		Title:       "Test Event",
+		Description: "Test Description",
+		StartTime:   time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC),
+		EndTime:     time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC),
+		UserID:      "user-123",
+	}
+
+	bodyBytes, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequestWithContext(context.Background(), "POST",
+		"/events", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	assert.True(t, strings.Contains(t0.buf.String(), `[I] HTTP Create/Request: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(t0.buf.String(),
+		`[I] HTTP Create Error: event creating failed database connection failed`))
+	assert.True(t, strings.Contains(t0.buf.String(), `[I] Request completed method: POST path: /events ip:  latency:`))
 }
