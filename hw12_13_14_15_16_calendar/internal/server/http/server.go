@@ -3,7 +3,9 @@ package internalhttp
 import (
 	"calendar/internal/app"
 	"calendar/internal/logger"
+	"calendar/internal/storage"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -18,14 +20,16 @@ type Server struct {
 	addr       string
 	httpServer *http.Server
 	log        *logger.Logger
+	storage    storage.Storage
 }
 
-func NewServer(cfg Config, app *app.App) *Server {
+func NewServer(cfg Config, app *app.App, storage storage.Storage) *Server {
 	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 
 	return &Server{
-		addr: addr,
-		log:  app.Logger,
+		addr:    addr,
+		log:     app.Logger,
+		storage: storage,
 	}
 }
 
@@ -49,6 +53,16 @@ func (s *Server) RegisterHandlers() {
 	// Hello-world endpoint.
 	mux.HandleFunc("/", s.handleHello)
 	mux.HandleFunc("/hello", s.handleHello)
+
+	// new API handlers
+	mux.HandleFunc("POST /events", s.handleCreateEvent)
+	mux.HandleFunc("GET /events/{id}", s.handleGetEvent)
+	mux.HandleFunc("PUT /events/{id}", s.handleUpdateEvent)
+	mux.HandleFunc("DELETE /events/{id}", s.handleDeleteEvent)
+	mux.HandleFunc("GET /events", s.handleListEvents)
+
+	// Health check для мониторинга
+	mux.HandleFunc("GET /health", s.handleHealth)
 
 	// Add logging before answer and after answer.
 	handler := LoggingMiddleware(s.log)(mux)
@@ -79,4 +93,37 @@ func (s *Server) handleHello(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(response))
+}
+
+// handleCreateEvent — POST /events ...
+func (s *Server) handleCreateEvent(w http.ResponseWriter, r *http.Request) {
+	// TODO: имплементация
+	w.WriteHeader(http.StatusCreated)
+}
+
+// handleGetEvent — GET /events/{id} ...
+func (s *Server) handleGetEvent(w http.ResponseWriter, r *http.Request) {
+	// TODO: имплементация
+}
+
+// handleUpdateEvent — PUT /events/{id} ...
+func (s *Server) handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
+	// TODO: имплементация
+}
+
+// handleDeleteEvent — DELETE /events/{id} ...
+func (s *Server) handleDeleteEvent(w http.ResponseWriter, r *http.Request) {
+	// TODO: имплементация
+}
+
+// handleListEvents — GET /events ...
+func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
+	// TODO: имплементация
+}
+
+// handleHealth — проверка, что сервер жив
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
