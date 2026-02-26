@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -191,9 +190,11 @@ func TestCreateEvent_Success(t *testing.T) {
 	}
 
 	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequestWithContext(context.Background(), "POST",
+	req, err := http.NewRequestWithContext(context.Background(), "POST",
 		"/events", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
 
 	// Выполняем
 	rr := httptest.NewRecorder()
@@ -234,9 +235,11 @@ func TestCreateEvent_JsonUnmarshallingError(t *testing.T) {
 
 	bodyBytes, _ := json.Marshal(reqBody)
 	bodyBytes[0] = '[' // spoiling Json string replace first { at [
-	req, _ := http.NewRequestWithContext(context.Background(), "POST",
+	req, err := http.NewRequestWithContext(context.Background(), "POST",
 		"/events", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
 
 	// Выполняем
 	rr := httptest.NewRecorder()
@@ -268,9 +271,11 @@ func TestCreateEvent_EventCreatingFailure(t *testing.T) {
 	}
 
 	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequestWithContext(context.Background(), "POST",
+	req, err := http.NewRequestWithContext(context.Background(), "POST",
 		"/events", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
 
 	// Выполняем
 	rr := httptest.NewRecorder()
@@ -360,9 +365,11 @@ func TestUpdateEvent_Success(t *testing.T) {
 	}
 
 	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequestWithContext(context.Background(), "PUT",
+	req, err := http.NewRequestWithContext(context.Background(), "PUT",
 		fmt.Sprintf("/events/%s", ID), bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
 
 	// Выполняем
 	rr := httptest.NewRecorder()
@@ -400,9 +407,11 @@ func TestUpdateEvent_JsonUnmarshallingError(t *testing.T) {
 
 	bodyBytes, _ := json.Marshal(reqBody)
 	bodyBytes[0] = '[' // spoiling Json string replace first { at [
-	req, _ := http.NewRequestWithContext(context.Background(), "PUT",
+	req, err := http.NewRequestWithContext(context.Background(), "PUT",
 		fmt.Sprintf("/events/%s", ID), bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
 
 	// Выполняем
 	rr := httptest.NewRecorder()
@@ -436,9 +445,11 @@ func TestUpdateEvent_EventUpdatingFailure(t *testing.T) {
 	}
 
 	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequestWithContext(context.Background(), "PUT",
+	req, err := http.NewRequestWithContext(context.Background(), "PUT",
 		fmt.Sprintf("/events/%s", ID), bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
 
 	// Выполняем
 	rr := httptest.NewRecorder()
@@ -452,7 +463,81 @@ func TestUpdateEvent_EventUpdatingFailure(t *testing.T) {
 		`[I] HTTP Update Error: event updating failed database connection failed`))
 	assert.True(t, strings.Contains(fx.LogBuffer(),
 		`[I] Request completed method: PUT path: /events/generated-id-ABC ip:  latency:`))
+}
 
-	logContent := fx.LogBuffer()
-	_ = os.WriteFile("test_logs.txt", []byte(logContent), 0644)
+// GetEvent .....
+func TestGetEvent_Success(t *testing.T) {
+	mockStorage := &MockStorage{
+		GetEventFunc: func(ctx context.Context, id string) (*storage.Event, error) {
+			return &storage.Event{
+				ID:          "generated-id-XXX",
+				Title:       "Test Event",
+				Description: "Test Description",
+				StartTime:   time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC),
+				EndTime:     time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC),
+				UserID:      "user-123",
+			}, nil
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	ID := "generated-id-XXX"
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		fmt.Sprintf("/events/%s", ID), nil)
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var resp EventResponse
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+
+	assert.Equal(t, "generated-id-XXX", resp.ID)
+	assert.Equal(t, "Test Event", resp.Title)
+	assert.Equal(t, "Test Description", resp.Description)
+	assert.Equal(t, time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC), resp.StartTime)
+	assert.Equal(t, time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC), resp.EndTime)
+	assert.Equal(t, "user-123", resp.UserID)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Get/Request: id=generated-id-XXX`))
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Get/Response: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: GET path: /events/generated-id-XXX ip:  latency:`))
+}
+
+func TestGetEvent_Error(t *testing.T) {
+
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		GetEventFunc: func(ctx context.Context, id string) (*storage.Event, error) {
+			return nil, expectedErr
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	ID := "generated-id-XXX"
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		fmt.Sprintf("/events/%s", ID), nil)
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, `{"error":"database connection failed"}`+"\n", rr.Body.String())
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Get/Request: id=generated-id-XXX`))
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Get Error: event getting failed database connection failed`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: GET path: /events/generated-id-XXX ip:  latency:`))
 }

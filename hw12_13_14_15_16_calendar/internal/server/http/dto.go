@@ -16,13 +16,7 @@ type CreateEventRequest struct {
 
 // UpdateEventRequest — DTO для обновления события (PUT /events/{id}).
 // Внимание: ID события передаётся в URL, не в теле!.
-type UpdateEventRequest struct {
-	Title       string    `json:"title"`
-	Description string    `json:"description,omitempty"`
-	StartTime   time.Time `json:"startTime"`
-	EndTime     time.Time `json:"endTime"`
-	UserID      string    `json:"userId"`
-}
+type UpdateEventRequest CreateEventRequest
 
 // EventResponse — DTO для ответа с данными события.
 // Возвращается при создании, получении и обновлении события.

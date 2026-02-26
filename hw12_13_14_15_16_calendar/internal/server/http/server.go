@@ -220,7 +220,42 @@ func (s *Server) handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 
 // handleGetEvent — GET /events/{id} ...
 func (s *Server) handleGetEvent(w http.ResponseWriter, r *http.Request) {
-	// TODO: имплементация
+	// 1. Достаём ID из URL: /events/123 ....
+	id, err := s.EventIDFromURL(r.URL.Path)
+	if err != nil {
+		http.Error(w, "invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	s.log.Infof("HTTP Get/Request: id=%s", id)
+
+	// 2. Вызываем ТОТ ЖЕ storage, что и gRPC!.
+	event, err := s.storage.GetEvent(r.Context(), id)
+	if err != nil {
+		// Возвращаем JSON с ошибкой.
+		s.log.Infof("HTTP Get Error: event getting failed %s", err.Error())
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// 3. Преобразуем в response DTO.
+	resp := EventResponse{
+		ID:          event.ID,
+		Title:       event.Title,
+		Description: event.Description,
+		StartTime:   event.StartTime,
+		EndTime:     event.EndTime,
+		UserID:      event.UserID,
+	}
+
+	s.log.Infof("HTTP Get/Response: title=%q, user_id=%s", resp.Title, resp.UserID)
+
+	// 4. Возвращаем JSON с созданным событием.
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
 }
 
 // handleDeleteEvent — DELETE /events/{id} ...
