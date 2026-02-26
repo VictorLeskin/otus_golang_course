@@ -468,7 +468,7 @@ func TestUpdateEvent_EventUpdatingFailure(t *testing.T) {
 // GetEvent .....
 func TestGetEvent_Success(t *testing.T) {
 	mockStorage := &MockStorage{
-		GetEventFunc: func(ctx context.Context, id string) (*storage.Event, error) {
+		GetEventFunc: func(_ context.Context, id string) (*storage.Event, error) {
 			return &storage.Event{
 				ID:          "generated-id-XXX",
 				Title:       "Test Event",
@@ -512,10 +512,9 @@ func TestGetEvent_Success(t *testing.T) {
 }
 
 func TestGetEvent_Error(t *testing.T) {
-
 	expectedErr := fmt.Errorf("database connection failed")
 	mockStorage := &MockStorage{
-		GetEventFunc: func(ctx context.Context, id string) (*storage.Event, error) {
+		GetEventFunc: func(_ context.Context, id string) (*storage.Event, error) {
 			return nil, expectedErr
 		},
 	}
