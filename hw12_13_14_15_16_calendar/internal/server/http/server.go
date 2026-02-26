@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -145,9 +146,30 @@ func (s *Server) handleCreateEvent(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+func (s *Server) EventIDFromURL(urlPath string) (string, error) {
+	_ = s
+	// 1. Достаём ID из URL: /events/123 ....
+	pathParts := strings.Split(urlPath, "/")
+	if len(pathParts) != 3 {
+		return "", fmt.Errorf("invalid URL")
+	}
+	id := pathParts[2] //
+	if id == "" {
+		return "", fmt.Errorf("invalid URL")
+	}
+	return id, nil
+}
+
 // handleUpdateEvent — PUT /events/{id} ...
 func (s *Server) handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
-	// 1. Читаем JSON из тела.
+	// 1. Достаём ID из URL: /events/123 ....
+	id, err := s.EventIDFromURL(r.URL.Path)
+	if err != nil {
+		http.Error(w, "invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	// 2. Читаем JSON из тела.
 	var req UpdateEventRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		s.log.Infof("HTTP Update Error: invalid json %s", err.Error())
@@ -157,8 +179,9 @@ func (s *Server) handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 
 	s.log.Infof("HTTP Update/Request: title=%q, user_id=%s", req.Title, req.UserID)
 
-	// 2. Преобразуем в storage.Event.
+	// 3. Преобразуем в storage.Event.
 	event := &storage.Event{
+		ID:          id,
 		Title:       req.Title,
 		Description: req.Description,
 		StartTime:   req.StartTime,
@@ -166,18 +189,18 @@ func (s *Server) handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 		UserID:      req.UserID,
 	}
 
-	// 3. Вызываем ТОТ ЖЕ storage, что и gRPC!.
-	err := s.storage.UpdateEvent(r.Context(), event)
+	// 4. Вызываем ТОТ ЖЕ storage, что и gRPC!.
+	err = s.storage.UpdateEvent(r.Context(), event)
 	if err != nil {
 		// Возвращаем JSON с ошибкой.
-		s.log.Infof("HTTP Update Error: event creating failed %s", err.Error())
+		s.log.Infof("HTTP Update Error: event updating failed %s", err.Error())
 		json.NewEncoder(w).Encode(map[string]string{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	// 4. Преобразуем в response DTO.
+	// 5. Преобразуем в response DTO.
 	resp := EventResponse{
 		ID:          event.ID,
 		Title:       event.Title,
@@ -189,7 +212,7 @@ func (s *Server) handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 
 	s.log.Infof("HTTP Update/Response: title=%q, user_id=%s", req.Title, req.UserID)
 
-	// 4. Возвращаем JSON с созданным событием.
+	// 6. Возвращаем JSON с созданным событием.
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
