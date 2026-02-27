@@ -48,6 +48,17 @@ func (s *Server) Stop(ctx context.Context) error {
 	return s.httpServer.Shutdown(ctx)
 }
 
+func ConvertEventResponse(event *storage.Event) EventResponse {
+	return EventResponse{
+		ID:          event.ID,
+		Title:       event.Title,
+		Description: event.Description,
+		StartTime:   event.StartTime,
+		EndTime:     event.EndTime,
+		UserID:      event.UserID,
+	}
+}
+
 func (s *Server) RegisterHandlers() {
 	mux := http.NewServeMux()
 
@@ -129,14 +140,7 @@ func (s *Server) handleCreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Преобразуем в response DTO.
-	resp := EventResponse{
-		ID:          event.ID,
-		Title:       event.Title,
-		Description: event.Description,
-		StartTime:   event.StartTime,
-		EndTime:     event.EndTime,
-		UserID:      event.UserID,
-	}
+	resp := ConvertEventResponse(event)
 
 	s.log.Infof("HTTP Create/Response: title=%q, user_id=%s", req.Title, req.UserID)
 
@@ -201,14 +205,7 @@ func (s *Server) handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 5. Преобразуем в response DTO.
-	resp := EventResponse{
-		ID:          event.ID,
-		Title:       event.Title,
-		Description: event.Description,
-		StartTime:   event.StartTime,
-		EndTime:     event.EndTime,
-		UserID:      event.UserID,
-	}
+	resp := ConvertEventResponse(event)
 
 	s.log.Infof("HTTP Update/Response: title=%q, user_id=%s", req.Title, req.UserID)
 
@@ -241,14 +238,7 @@ func (s *Server) handleGetEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Преобразуем в response DTO.
-	resp := EventResponse{
-		ID:          event.ID,
-		Title:       event.Title,
-		Description: event.Description,
-		StartTime:   event.StartTime,
-		EndTime:     event.EndTime,
-		UserID:      event.UserID,
-	}
+	resp := ConvertEventResponse(event)
 
 	s.log.Infof("HTTP Get/Response: title=%q, user_id=%s", resp.Title, resp.UserID)
 
@@ -260,12 +250,70 @@ func (s *Server) handleGetEvent(w http.ResponseWriter, r *http.Request) {
 
 // handleDeleteEvent — DELETE /events/{id} ...
 func (s *Server) handleDeleteEvent(w http.ResponseWriter, r *http.Request) {
-	// TODO: имплементация
+	// 1. Достаём ID из URL: /events/123 ....
+	id, err := s.EventIDFromURL(r.URL.Path)
+	if err != nil {
+		http.Error(w, "invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	s.log.Infof("HTTP Delete/Request: id=%s", id)
+
+	// 2. Вызываем ТОТ ЖЕ storage, что и gRPC!.
+	err = s.storage.DeleteEvent(r.Context(), id)
+	if err != nil {
+		// Возвращаем JSON с ошибкой.
+		s.log.Infof("HTTP Delete Error: event deleting failed %s", err.Error())
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	s.log.Infof("HTTP Delete/Response: id=%s", id)
+
+	// 4. Возвращаем JSON с созданным событием.
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"deleted id": id,
+	})
 }
 
 // handleListEvents — GET /events ...
 func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
-	// TODO: имплементация
+	// 1. Получаем user_id из query-параметра
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		http.Error(w, "missing user_id", http.StatusBadRequest)
+		return
+	}
+
+	s.log.Infof("HTTP ListEvents/Request: id=%s", userID)
+
+	// 2. Вызываем ТОТ ЖЕ storage, что и gRPC!.
+	events, err := s.storage.ListEvents(r.Context(), userID)
+	if err != nil {
+		// Возвращаем JSON с ошибкой.
+		s.log.Infof("HTTP ListEvents Error: list events getting failed %s", err.Error())
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// 3. Преобразуем в response DTO.
+	var resp ListEventsResponse
+	for _, event := range events {
+		resp.Events = append(resp.Events, ConvertEventResponse(event))
+	}
+
+	s.log.Infof("HTTP ListEvents/Response: user_id=%s", userID)
+
+	// 4. Возвращаем JSON с созданным событием.
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
 }
 
 // handleHealth — проверка, что сервер жив.
