@@ -317,7 +317,7 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleHealth — проверка, что сервер жив.
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
