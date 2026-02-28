@@ -1,8 +1,6 @@
 package main
 
 import (
-	"calendar/internal/app"
-	"calendar/internal/logger"
 	"context"
 	"errors"
 	"flag"
@@ -11,6 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"calendar/internal/app"
+	"calendar/internal/logger"
 
 	internalhttp "calendar/internal/server/http"
 	memorystorage "calendar/internal/storage/memory"

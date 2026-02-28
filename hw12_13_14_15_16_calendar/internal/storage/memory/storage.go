@@ -1,9 +1,10 @@
 package memorystorage
 
 import (
-	"calendar/internal/storage"
 	"context"
 	"sync"
+
+	"calendar/internal/storage"
 )
 
 type MemoryStorage struct {

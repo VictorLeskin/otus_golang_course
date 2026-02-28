@@ -98,7 +98,7 @@ func ValidateLogLevel(level string) error {
 	return nil
 }
 
-func (l Logger) println0(lvl string, msg string) {
+func (l Logger) println0(lvl, msg string) {
 	fmt.Fprintln(l.output, lvl, msg)
 }
 

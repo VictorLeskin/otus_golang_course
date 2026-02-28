@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"calendar/api/pb/calendar" // geerated code
+	"calendar/api/pb/calendar"
 	"calendar/internal/logger"
-	"calendar/internal/storage" // storage.Storage interface
+	"calendar/internal/storage"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -47,7 +47,7 @@ func convertToPBEvent(from *storage.Event) *calendar.Event {
 	}
 }
 
-func (s *Server) LogCalendarEvent(method string, stage string, event *calendar.Event) {
+func (s *Server) LogCalendarEvent(method, stage string, event *calendar.Event) {
 	s.logger.Infof("gRPC %s/%s Id: %s Title: %q Description: %q StartTime:%s EndTime:%s UserId: %s",
 		method, stage,
 		event.Id, event.Title, event.Description,
@@ -88,7 +88,8 @@ func (s *Server) LogListEventsResponse(resp *calendar.ListEventsResponse) {
 }
 
 func (s *Server) CreateEvent(ctx context.Context,
-	req *calendar.CreateEventRequest) (*calendar.CreateEventResponse, error) {
+	req *calendar.CreateEventRequest,
+) (*calendar.CreateEventResponse, error) {
 	s.LogCalendarEvent("Create", "Request", req.Event)
 
 	event := convertFromPBEvent(req.Event)
@@ -111,7 +112,8 @@ func (s *Server) CreateEvent(ctx context.Context,
 }
 
 func (s *Server) UpdateEvent(ctx context.Context,
-	req *calendar.UpdateEventRequest) (*calendar.UpdateEventResponse, error) {
+	req *calendar.UpdateEventRequest,
+) (*calendar.UpdateEventResponse, error) {
 	s.LogCalendarEvent("Update", "Request", req.Event)
 
 	event := convertFromPBEvent(req.Event)
@@ -134,7 +136,8 @@ func (s *Server) UpdateEvent(ctx context.Context,
 }
 
 func (s *Server) DeleteEvent(ctx context.Context,
-	req *calendar.DeleteEventRequest) (*calendar.DeleteEventResponse, error) {
+	req *calendar.DeleteEventRequest,
+) (*calendar.DeleteEventResponse, error) {
 	s.LogDeleteRequest(req)
 
 	err := s.storage.DeleteEvent(ctx, req.Id)
@@ -152,7 +155,8 @@ func (s *Server) DeleteEvent(ctx context.Context,
 }
 
 func (s *Server) GetEvent(ctx context.Context,
-	req *calendar.GetEventRequest) (*calendar.GetEventResponse, error) {
+	req *calendar.GetEventRequest,
+) (*calendar.GetEventResponse, error) {
 	s.LogGetRequest(req)
 
 	event, err := s.storage.GetEvent(ctx, req.Id)
@@ -173,7 +177,8 @@ func (s *Server) GetEvent(ctx context.Context,
 }
 
 func (s *Server) ListEvents(ctx context.Context,
-	req *calendar.ListEventsRequest) (*calendar.ListEventsResponse, error) {
+	req *calendar.ListEventsRequest,
+) (*calendar.ListEventsResponse, error) {
 	s.LogListEventsRequest(req)
 
 	events, err := s.storage.ListEvents(ctx, req.Id)

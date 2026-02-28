@@ -2,9 +2,6 @@ package internalhttp
 
 import (
 	"bytes"
-	"calendar/internal/app"
-	"calendar/internal/logger"
-	"calendar/internal/storage"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -14,6 +11,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"calendar/internal/app"
+	"calendar/internal/logger"
+	"calendar/internal/storage"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

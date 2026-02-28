@@ -1,14 +1,15 @@
 package grpc
 
 import (
-	"calendar/api/pb/calendar"
-	"calendar/internal/logger"
-	"calendar/internal/storage"
 	"context"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"calendar/api/pb/calendar"
+	"calendar/internal/logger"
+	"calendar/internal/storage"
 
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/timestamppb"
