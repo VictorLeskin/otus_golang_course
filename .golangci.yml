@@ -30,6 +30,7 @@ linters-settings:
         allow:
           - $gostd
           - github.com/stretchr/testify
+          - google.golang.org/protobuf/types/known/timestamppb
           - calendar/api/pb/calendar
           - calendar/internal
 issues:
