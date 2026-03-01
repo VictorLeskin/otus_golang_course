@@ -3,6 +3,7 @@ package memorystorage
 import (
 	"context"
 	"testing"
+	"time"
 
 	"calendar/internal/storage"
 
@@ -186,11 +187,14 @@ func TestStorage_GetEvent(t *testing.T) {
 }
 
 func TestStorage_ListEvents(t *testing.T) {
-	t1 := &storage.Event{ID: "t1", Title: "Title_t1", UserID: "user1"}
-	t2 := &storage.Event{ID: "t2", Title: "Title_t2", UserID: "user2"}
-	t3 := &storage.Event{ID: "t3", Title: "Title_t3", UserID: "user1"}
-	t4 := &storage.Event{ID: "t4", Title: "Title_t4", UserID: "user4"}
-	t5 := &storage.Event{ID: "t5", Title: "Title_t5", UserID: "user1"}
+	baseTime := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
+
+	// События с разным временем начала
+	t1 := &storage.Event{ID: "t1", Title: "Title_t1", StartTime: baseTime}                     // ровно в базовое
+	t2 := &storage.Event{ID: "t2", Title: "Title_t2", StartTime: baseTime.Add(2 * time.Hour)}  // +2 часа
+	t3 := &storage.Event{ID: "t3", Title: "Title_t3", StartTime: baseTime.Add(-2 * time.Hour)} // -2 часа
+	t4 := &storage.Event{ID: "t4", Title: "Title_t4", StartTime: baseTime.Add(5 * time.Hour)}  // +5 часов
+	t5 := &storage.Event{ID: "t5", Title: "Title_t5", StartTime: baseTime.Add(-5 * time.Hour)} // -5 часов
 
 	initStorage := func(ms *MemoryStorage) {
 		ms.CreateEvent(context.Background(), t1)
@@ -204,7 +208,12 @@ func TestStorage_ListEvents(t *testing.T) {
 		t0 := New()
 		initStorage(t0)
 
-		ret, err := t0.ListEvents(context.Background(), "user1")
+		// Интервал от -3 до +3 часов от baseTime
+		from := baseTime.Add(-3 * time.Hour)
+		to := baseTime.Add(3 * time.Hour)
+
+		ret, err := t0.ListEventsInInterval(context.Background(), from, to)
+
 		assert.NoError(t, err)
 		require.Equal(t, 3, len(ret))
 
@@ -214,9 +223,9 @@ func TestStorage_ListEvents(t *testing.T) {
 			found[event.ID] = true
 		}
 
-		assert.True(t, found["t1"], "Event with ID t1 not found")
-		assert.True(t, found["t3"], "Event with ID t2 not found")
-		assert.True(t, found["t5"], "Event with ID t3 not found")
+		assert.True(t, found["t1"], "t1, should be in interval")
+		assert.True(t, found["t2"], "t2, should be in interval")
+		assert.True(t, found["t3"], "t3, should be in interval")
 	})
 
 	t.Run("fail: context cancellation", func(t *testing.T) {
@@ -227,7 +236,12 @@ func TestStorage_ListEvents(t *testing.T) {
 		cancel()
 
 		// cancelling before colllecting list of elemets
-		ret, err := t0.ListEvents(ctx, "user1")
+		// Интервал от -3 до +3 часов от baseTime
+		from := baseTime.Add(-3 * time.Hour)
+		to := baseTime.Add(3 * time.Hour)
+
+		ret, err := t0.ListEventsInInterval(ctx, from, to)
+
 		assert.ErrorIs(t, err, context.Canceled)
 		assert.Equal(t, 0, len(ret))
 	})

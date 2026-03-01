@@ -3,6 +3,7 @@ package memorystorage
 import (
 	"context"
 	"sync"
+	"time"
 
 	"calendar/internal/storage"
 )
@@ -111,4 +112,26 @@ func (ms *MemoryStorage) ListEvents(ctx context.Context, userID string) ([]*stor
 	return result, nil
 }
 
-// TODO
+func IsTimeInInterval(t, from, to time.Time) bool {
+	return !t.Before(from) && !t.After(to)
+}
+
+func (ms *MemoryStorage) ListEventsInInterval(ctx context.Context, from, to time.Time) ([]*storage.Event, error) {
+	ms.mu.RLock()
+	defer ms.mu.RUnlock()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	var result []*storage.Event
+	for _, event := range ms.events {
+		if event.IsStartTimeInInterval(from, to) {
+			result = append(result, event)
+		}
+	}
+
+	return result, nil
+}

@@ -27,9 +27,18 @@ type Storage interface {
 	DeleteEvent(ctx context.Context, id string) error
 	GetEvent(ctx context.Context, id string) (*Event, error)
 	ListEvents(ctx context.Context, userID string) ([]*Event, error)
+	// get a list of events in given interval.
+	ListEventsInInterval(ctx context.Context, from, to time.Time) ([]*Event, error)
 }
 
 var (
 	ErrEventNotFound = fmt.Errorf("an event not found")
 	ErrEventExists   = fmt.Errorf("this event exists")
 )
+
+func (e *Event) IsStartTimeInInterval(from, to time.Time) bool {
+	if e == nil {
+		return false
+	}
+	return !e.StartTime.Before(from) && !e.StartTime.After(to)
+}
