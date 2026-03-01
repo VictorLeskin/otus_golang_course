@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -90,11 +91,12 @@ func NewMockLogger() *MockLogger {
 
 // internal/server/grpc/mock_storage_test.go ...
 type MockStorage struct {
-	CreateEventFunc func(ctx context.Context, event *storage.Event) error
-	UpdateEventFunc func(ctx context.Context, event *storage.Event) error
-	DeleteEventFunc func(ctx context.Context, id string) error
-	GetEventFunc    func(ctx context.Context, id string) (*storage.Event, error)
-	ListEventsFunc  func(ctx context.Context, userId string) ([]*storage.Event, error)
+	CreateEventFunc          func(ctx context.Context, event *storage.Event) error
+	UpdateEventFunc          func(ctx context.Context, event *storage.Event) error
+	DeleteEventFunc          func(ctx context.Context, id string) error
+	GetEventFunc             func(ctx context.Context, id string) (*storage.Event, error)
+	ListEventsFunc           func(ctx context.Context, userId string) ([]*storage.Event, error)
+	ListEventsInIntervalFunc func(ctx context.Context, from, to time.Time) ([]*storage.Event, error)
 }
 
 // common fixture for the Create/Update/... functions.
@@ -167,6 +169,13 @@ func (m *MockStorage) DeleteEvent(ctx context.Context, id string) error {
 func (m *MockStorage) ListEvents(ctx context.Context, userID string) ([]*storage.Event, error) {
 	if m.ListEventsFunc != nil {
 		return m.ListEventsFunc(ctx, userID)
+	}
+	return nil, nil
+}
+
+func (m *MockStorage) ListEventsInInterval(ctx context.Context, from, to time.Time) ([]*storage.Event, error) {
+	if m.ListEventsInIntervalFunc != nil {
+		return m.ListEventsInIntervalFunc(ctx, from, to)
 	}
 	return nil, nil
 }
@@ -703,8 +712,184 @@ func TestListEvents_ErrorUserIdIsEmpty(t *testing.T) {
 
 	// Проверки
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Equal(t, "missing user_id\n", rr.Body.String())
+	assert.Equal(t, "error parsing input parameters missing input parameters\n", rr.Body.String())
 
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: GET path: /events ip:  latency:`))
+}
+
+func TestParseListEventsParams(t *testing.T) {
+	t.Run("success with user_id only", func(t *testing.T) {
+		// Создаём запрос с user_id
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "user_id=user123",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "user123", params.UserID)
+		assert.False(t, params.HasFromTo)
+		assert.True(t, params.From.IsZero())
+		assert.True(t, params.To.IsZero())
+	})
+
+	t.Run("success with from/to only", func(t *testing.T) {
+		// Создаём запрос с интервалом
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "from=2026-03-01T00:00:00Z&to=2026-03-02T00:00:00Z",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.NoError(t, err)
+		assert.Empty(t, params.UserID)
+		assert.True(t, params.HasFromTo)
+
+		expectedFrom := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+		expectedTo := time.Date(2026, 3, 2, 0, 0, 0, 0, time.UTC)
+
+		assert.Equal(t, expectedFrom, params.From)
+		assert.Equal(t, expectedTo, params.To)
+	})
+
+	t.Run("error: missing from when to present", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "to=2026-03-02T00:00:00Z",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing 'from'")
+		assert.False(t, params.HasFromTo)
+	})
+
+	t.Run("error: missing to when from present", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "from=2026-03-01T00:00:00Z",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing 'to'")
+		assert.False(t, params.HasFromTo)
+	})
+
+	t.Run("error: invalid from format", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "from=invalid&to=2026-03-02T00:00:00Z",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid 'from' format")
+		assert.False(t, params.HasFromTo)
+	})
+
+	t.Run("error: invalid to format", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "from=2026-03-01T00:00:00Z&to=invalid",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid 'to' format")
+		assert.False(t, params.HasFromTo)
+	})
+
+	t.Run("error: from after to", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "from=2026-03-02T00:00:00Z&to=2026-03-01T00:00:00Z",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "'from' must be before or equal to 'to'")
+		assert.False(t, params.HasFromTo)
+	})
+
+	t.Run("no parameters returns default empty params", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing input parameters")
+		assert.False(t, params.HasFromTo)
+	})
+}
+
+// ListEventsInInterval .....
+func TestListEventsInInterval_Success(t *testing.T) {
+	mockStorage := &MockStorage{
+		ListEventsInIntervalFunc: func(_ context.Context, _, _ time.Time) (events []*storage.Event, _ error) {
+			event0 := &storage.Event{
+				ID:     "id-122",
+				UserID: "UserID1",
+			}
+			event1 := &storage.Event{
+				ID:     "id-777",
+				UserID: "UserID2",
+			}
+			events = append(events, event0)
+			events = append(events, event1)
+			return events, nil
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// make start and end.
+	from := time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC)
+	to := from.Add(2 * time.Hour)
+
+	params := url.Values{}
+	params.Add("from", from.Format(time.RFC3339))
+	params.Add("to", to.Format(time.RFC3339))
+
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		fmt.Sprintf("/events?%s", params.Encode()), nil)
+
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var resp ListEventsResponse
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+
+	assert.Equal(t, 2, len(resp.Events))
+	assert.Equal(t, "id-122", resp.Events[0].ID)
+	assert.Equal(t, "id-777", resp.Events[1].ID)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] HTTP ListEventsInInterval/Request: from=2026-02-25 15:30:00 +0000 UTC to=2026-02-25 17:30:00 +0000 UTC`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] HTTP ListEventsInInterval/Response: from=2026-02-25 15:30:00 +0000 UTC to=2026-02-25 17:30:00 +0000 UTC`))
 	assert.True(t, strings.Contains(fx.LogBuffer(),
 		`[I] Request completed method: GET path: /events ip:  latency:`))
 }

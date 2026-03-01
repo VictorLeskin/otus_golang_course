@@ -77,7 +77,8 @@ func (s *Server) LogListEventsRequest(req *calendar.ListEventsRequest) {
 }
 
 func (s *Server) LogListEventsInIntervalRequest(req *calendar.ListEventsInIntervalRequest) {
-	s.logger.Infof("gRPC ListEventsInInterval/Request From: %s To: %s", req.From.AsTime().String(), req.To.AsTime().String())
+	s.logger.Infof("gRPC ListEventsInInterval/Request From: %s To: %s",
+		req.From.AsTime().String(), req.To.AsTime().String())
 }
 
 func (s *Server) LogListEventsResponse(t string, resp *calendar.ListEventsResponse) {

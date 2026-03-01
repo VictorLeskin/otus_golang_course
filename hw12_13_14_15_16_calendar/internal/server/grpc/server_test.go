@@ -605,7 +605,7 @@ func TestListEventsInInterval_Success(t *testing.T) {
 	t0 := NewMockLogger()
 
 	mockStorage := &MockStorage{
-		ListEventsInIntervalFunc: func(ctx context.Context, _, _ time.Time) (events []*storage.Event, _ error) {
+		ListEventsInIntervalFunc: func(_ context.Context, _, _ time.Time) (events []*storage.Event, _ error) {
 			event0 := &storage.Event{
 				ID:     "id-122",
 				UserID: "UserID1",
@@ -653,7 +653,7 @@ func TestListEventsInInterval_StorageError(t *testing.T) {
 
 	expectedErr := fmt.Errorf("database connection failed")
 	mockStorage := &MockStorage{
-		ListEventsInIntervalFunc: func(ctx context.Context, _, _ time.Time) (events []*storage.Event, _ error) {
+		ListEventsInIntervalFunc: func(_ context.Context, _, _ time.Time) (events []*storage.Event, _ error) {
 			return nil, expectedErr
 		},
 	}

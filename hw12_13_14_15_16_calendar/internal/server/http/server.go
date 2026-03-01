@@ -281,8 +281,102 @@ func (s *Server) handleDeleteEvent(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// ListEventsParams for parsed parameters of a request.
+type ListEventsParams struct {
+	UserID    string
+	From      time.Time
+	To        time.Time
+	HasFromTo bool // interval parameters are valid.
+}
+
+// ParseListEventsParams разбирает query-параметры запроса.
+func ParseListEventsParameters(r *http.Request) (ListEventsParams, error) {
+	query := r.URL.Query()
+	params := ListEventsParams{
+		UserID: query.Get("user_id"),
+	}
+	if params.UserID != "" {
+		return params, nil
+	}
+
+	fromStr := query.Get("from")
+	toStr := query.Get("to")
+
+	// should be presented both.
+	if fromStr == "" {
+		if toStr == "" {
+			return params, fmt.Errorf("missing input parameters")
+		}
+		return params, fmt.Errorf("missing 'from' parameter")
+	}
+	if toStr == "" {
+		return params, fmt.Errorf("missing 'to' parameter")
+	}
+
+	// paring from and to.
+	from, err := time.Parse(time.RFC3339, fromStr)
+	if err != nil {
+		return params, fmt.Errorf("invalid 'from' format: %w (use RFC3339)", err)
+	}
+
+	to, err := time.Parse(time.RFC3339, toStr)
+	if err != nil {
+		return params, fmt.Errorf("invalid 'to' format: %w (use RFC3339)", err)
+	}
+
+	// chek interval validity.
+	if from.After(to) {
+		return params, fmt.Errorf("'from' must be before or equal to 'to'")
+	}
+
+	params.From = from
+	params.To = to
+	params.HasFromTo = true
+
+	return params, nil
+}
+
+func (s *Server) handleListEventsInInterval(from, to time.Time, w http.ResponseWriter, r *http.Request) {
+	s.log.Infof("HTTP ListEventsInInterval/Request: from=%s to=%s", from.String(), to.String())
+
+	// 2. Вызываем ТОТ ЖЕ storage, что и gRPC!.
+	events, err := s.storage.ListEventsInInterval(r.Context(), from, to)
+	if err != nil {
+		// Возвращаем JSON с ошибкой.
+		s.log.Infof("HTTP ListEventsInInterval Error: list events getting failed %s", err.Error())
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// 3. Преобразуем в response DTO.
+	var resp ListEventsResponse
+	for _, event := range events {
+		resp.Events = append(resp.Events, ConvertEventResponse(event))
+	}
+
+	s.log.Infof("HTTP ListEventsInInterval/Response: from=%s to=%s", from.String(), to.String())
+
+	// 4. Возвращаем JSON с созданным событием.
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
+}
+
 // handleListEvents — GET /events ...
 func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
+	// 1. Получаем user_id из query-параметра
+	params, err := ParseListEventsParameters(r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error parsing input parameters %s", err.Error()), http.StatusBadRequest)
+		return
+	}
+	if params.HasFromTo {
+		s.handleListEventsInInterval(params.From, params.To, w, r)
+		return
+	}
+
 	// 1. Получаем user_id из query-параметра
 	userID := r.URL.Query().Get("user_id")
 	if userID == "" {
