@@ -36,6 +36,11 @@ message ListEventsRequest{
   string id = 1;
 }
 
+message ListEventsInIntervalRequest {
+    google.protobuf.Timestamp from = 1;
+    google.protobuf.Timestamp to = 2;
+}
+
 // responses are the return parameter of the Storage interface functions.
 message CreateEventResponse{
   Event event = 1;
@@ -69,4 +74,5 @@ service CalendarService {
     rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse);
     rpc GetEvent(GetEventRequest) returns (GetEventResponse);
     rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+    rpc ListEventsInInterval(ListEventsInIntervalRequest) returns (ListEventsResponse);
 }
