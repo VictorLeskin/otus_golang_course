@@ -76,8 +76,12 @@ func (s *Server) LogListEventsRequest(req *calendar.ListEventsRequest) {
 	s.logger.Infof("gRPC ListEvents/Request Id: %s", req.Id)
 }
 
-func (s *Server) LogListEventsResponse(resp *calendar.ListEventsResponse) {
-	s.logger.Infof("gRPC ListEvents/Response cnt: %d", len(resp.Events))
+func (s *Server) LogListEventsInIntervalRequest(req *calendar.ListEventsInIntervalRequest) {
+	s.logger.Infof("gRPC ListEventsInInterval/Request From: %s To: %s", req.From.AsTime().String(), req.To.AsTime().String())
+}
+
+func (s *Server) LogListEventsResponse(t string, resp *calendar.ListEventsResponse) {
+	s.logger.Infof("gRPC %s/Response cnt: %d", t, len(resp.Events))
 	for _, event := range resp.Events {
 		s.logger.Infof("Id: %s Title: %q Description: %q StartTime:%s EndTime:%s UserId: %s",
 			event.Id, event.Title, event.Description,
@@ -196,6 +200,30 @@ func (s *Server) ListEvents(ctx context.Context,
 		resp.Events = append(resp.Events, convertToPBEvent(event))
 	}
 
-	s.LogListEventsResponse(resp)
+	s.LogListEventsResponse("ListEvents", resp)
+	return resp, nil
+}
+
+func (s *Server) ListEventsInInterval(ctx context.Context,
+	req *calendar.ListEventsInIntervalRequest,
+) (*calendar.ListEventsResponse, error) {
+	s.LogListEventsInIntervalRequest(req)
+
+	events, err := s.storage.ListEventsInInterval(ctx, req.From.AsTime(), req.To.AsTime())
+	if err != nil {
+		s.LogError("ListEventsInInterval", err)
+		return &calendar.ListEventsResponse{
+			Events:       nil,
+			ErrorMessage: err.Error(),
+		}, err
+	}
+
+	resp := &calendar.ListEventsResponse{}
+
+	for _, event := range events {
+		resp.Events = append(resp.Events, convertToPBEvent(event))
+	}
+
+	s.LogListEventsResponse("ListEventsInInterval", resp)
 	return resp, nil
 }

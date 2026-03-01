@@ -17,11 +17,12 @@ import (
 
 // internal/server/grpc/mock_storage_test.go ...
 type MockStorage struct {
-	CreateEventFunc func(ctx context.Context, event *storage.Event) error
-	UpdateEventFunc func(ctx context.Context, event *storage.Event) error
-	DeleteEventFunc func(ctx context.Context, id string) error
-	GetEventFunc    func(ctx context.Context, id string) (*storage.Event, error)
-	ListEventsFunc  func(ctx context.Context, userId string) ([]*storage.Event, error)
+	CreateEventFunc          func(ctx context.Context, event *storage.Event) error
+	UpdateEventFunc          func(ctx context.Context, event *storage.Event) error
+	DeleteEventFunc          func(ctx context.Context, id string) error
+	GetEventFunc             func(ctx context.Context, id string) (*storage.Event, error)
+	ListEventsFunc           func(ctx context.Context, userId string) ([]*storage.Event, error)
+	ListEventsInIntervalFunc func(ctx context.Context, from, to time.Time) ([]*storage.Event, error)
 }
 
 // MockLogger обёртка над logger.NewWriterLogger для тестов.
@@ -67,6 +68,13 @@ func (m *MockStorage) DeleteEvent(ctx context.Context, id string) error {
 func (m *MockStorage) ListEvents(ctx context.Context, userID string) ([]*storage.Event, error) {
 	if m.ListEventsFunc != nil {
 		return m.ListEventsFunc(ctx, userID)
+	}
+	return nil, nil
+}
+
+func (m *MockStorage) ListEventsInInterval(ctx context.Context, from, to time.Time) ([]*storage.Event, error) {
+	if m.ListEventsInIntervalFunc != nil {
+		return m.ListEventsInIntervalFunc(ctx, from, to)
 	}
 	return nil, nil
 }
@@ -590,4 +598,92 @@ func TestListEvents_StorageError(t *testing.T) {
 	assert.Contains(t, logOutput, "ListEvents Error")
 	assert.Contains(t, logOutput, "database connection failed")
 	assert.NotContains(t, logOutput, "ListEvents/Response")
+}
+
+// ...ListEventsInInterval...
+func TestListEventsInInterval_Success(t *testing.T) {
+	t0 := NewMockLogger()
+
+	mockStorage := &MockStorage{
+		ListEventsInIntervalFunc: func(ctx context.Context, _, _ time.Time) (events []*storage.Event, _ error) {
+			event0 := &storage.Event{
+				ID:     "id-122",
+				UserID: "UserID1",
+			}
+			event1 := &storage.Event{
+				ID:     "id-777",
+				UserID: "UserID2",
+			}
+			events = append(events, event0)
+			events = append(events, event1)
+			return events, nil
+		},
+	}
+
+	server := &Server{
+		storage: mockStorage,
+		logger:  t0.logger,
+	}
+
+	now := time.Now()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfDay := startOfDay.Add(24 * time.Hour)
+
+	req := &calendar.ListEventsInIntervalRequest{
+		From: timestamppb.New(startOfDay),
+		To:   timestamppb.New(endOfDay),
+	}
+
+	resp, err := server.ListEventsInInterval(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, resp.Events)
+	assert.Equal(t, 2, len(resp.Events))
+	assert.Equal(t, "id-122", resp.Events[0].Id)
+	assert.Equal(t, "id-777", resp.Events[1].Id)
+
+	// Проверка логов.
+	assert.True(t, strings.HasPrefix(t0.buf.String(), "[I] gRPC ListEventsInInterval/Request"))
+	assert.True(t, strings.Contains(t0.buf.String(), "[I] gRPC ListEventsInInterval/Response"))
+}
+
+func TestListEventsInInterval_StorageError(t *testing.T) {
+	t0 := NewMockLogger()
+
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		ListEventsInIntervalFunc: func(ctx context.Context, _, _ time.Time) (events []*storage.Event, _ error) {
+			return nil, expectedErr
+		},
+	}
+
+	server := &Server{
+		storage: mockStorage,
+		logger:  t0.logger,
+	}
+
+	now := time.Now()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfDay := startOfDay.Add(24 * time.Hour)
+
+	req := &calendar.ListEventsInIntervalRequest{
+		From: timestamppb.New(startOfDay),
+		To:   timestamppb.New(endOfDay),
+	}
+
+	resp, err := server.ListEventsInInterval(context.Background(), req)
+
+	assert.Error(t, err)
+	assert.Equal(t, expectedErr, err)
+	assert.NotNil(t, resp)
+	assert.Nil(t, resp.Events)
+	assert.Equal(t, expectedErr.Error(), resp.ErrorMessage)
+
+	// Проверка логов.
+	logOutput := t0.buf.String()
+	assert.Contains(t, logOutput, "ListEventsInInterval/Request")
+	assert.Contains(t, logOutput, "ListEventsInInterval Error")
+	assert.Contains(t, logOutput, "database connection failed")
+	assert.NotContains(t, logOutput, "ListEventsInInterval/Response")
 }
