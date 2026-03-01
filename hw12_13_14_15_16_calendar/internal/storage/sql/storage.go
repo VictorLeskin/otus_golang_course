@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"calendar/internal/storage"
 
@@ -176,6 +177,47 @@ func (s *SQLStorage) ListEvents(ctx context.Context, userID string) ([]*storage.
 	rows, err := s.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list events for user %s: %w", userID, err)
+	}
+	defer rows.Close()
+
+	var events []*storage.Event
+	for rows.Next() {
+		var event storage.Event
+		err := rows.Scan(
+			&event.ID,
+			&event.Title,
+			&event.Description,
+			&event.StartTime,
+			&event.EndTime,
+			&event.UserID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan event: %w", err)
+		}
+		events = append(events, &event)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return events, nil
+}
+
+func (s *SQLStorage) ListEventsInInterval(ctx context.Context, from, to time.Time) ([]*storage.Event, error) {
+	query := `
+        SELECT id, title, description, start_time, end_time, user_id, created_at, updated_at
+        FROM events
+        WHERE start_time >= $1 AND start_time <= $2
+        ORDER BY start_time
+    `
+
+	rows, err := s.db.QueryContext(ctx, query, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query events in interval [%v, %v]: %w",
+			from.Format(time.RFC3339),
+			to.Format(time.RFC3339),
+			err)
 	}
 	defer rows.Close()
 
