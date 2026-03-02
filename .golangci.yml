@@ -8,6 +8,9 @@ linters-settings:
   funlen:
     lines: 150
     statements: 80
+  gofumpt:
+    module-path: calendar
+    extra-rules: true
   depguard:
     rules:
       Main:
@@ -17,12 +20,19 @@ linters-settings:
         allow:
           - $gostd
           - golang.org/x/example/hello/reverse
+          - calendar/internal
+          - calendar/api/pb/calendar
+          - github.com/lib/pq
+          - google.golang.org/protobuf/types/known/timestamppb
       Test:
         files:
           - $test
         allow:
           - $gostd
           - github.com/stretchr/testify
+          - google.golang.org/protobuf/types/known/timestamppb
+          - calendar/api/pb/calendar
+          - calendar/internal
 issues:
   exclude-rules:
     - path: _test\.go
@@ -45,7 +55,6 @@ linters:
     - exhaustive
     - copyloopvar
     - funlen
-    - gci
     - gocognit
     - goconst
     - gocritic

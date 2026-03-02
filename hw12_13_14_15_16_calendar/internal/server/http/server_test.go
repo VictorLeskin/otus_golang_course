@@ -1,0 +1,895 @@
+package internalhttp
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"testing"
+	"time"
+
+	"calendar/internal/app"
+	"calendar/internal/logger"
+	"calendar/internal/storage"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestServer_Response(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  string
+		response string
+	}{
+		{
+			"hello",
+			"/hello",
+			"Hello from Calendar Service!\n",
+		},
+		{
+			"root",
+			"/",
+			"Hello, World!\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logBuffer := &bytes.Buffer{}
+			log := logger.NewWriterLogger("debug", logBuffer)
+
+			mockApp := &app.App{
+				Logger: log,
+			}
+
+			srv := NewServer(Config{
+				Host: "localhost",
+				Port: "8080",
+			}, mockApp, nil)
+
+			srv.RegisterHandlers()
+
+			req := httptest.NewRequest(http.MethodGet, tt.request, nil)
+			w := httptest.NewRecorder()
+
+			// Получаем handler и вызываем его
+			handler := srv.GetHandler() // нужно добавить этот метод
+			handler.ServeHTTP(w, req)
+
+			// Проверяем ответ
+			resp := w.Result()
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Equal(t, string(body), tt.response)
+			assert.True(t, strings.HasPrefix(logBuffer.String(), "[D] Request started"))
+			assert.Contains(t, logBuffer.String(), "[I] Request completed")
+		})
+	}
+}
+
+// MockLogger обёртка над logger.NewWriterLogger для тестов.
+type MockLogger struct {
+	buf    strings.Builder
+	logger *logger.Logger
+}
+
+func NewMockLogger() *MockLogger {
+	ml := &MockLogger{}
+	ml.logger = logger.NewWriterLogger("info", &ml.buf)
+	return ml
+}
+
+// internal/server/grpc/mock_storage_test.go ...
+type MockStorage struct {
+	CreateEventFunc          func(ctx context.Context, event *storage.Event) error
+	UpdateEventFunc          func(ctx context.Context, event *storage.Event) error
+	DeleteEventFunc          func(ctx context.Context, id string) error
+	GetEventFunc             func(ctx context.Context, id string) (*storage.Event, error)
+	ListEventsFunc           func(ctx context.Context, userId string) ([]*storage.Event, error)
+	ListEventsInIntervalFunc func(ctx context.Context, from, to time.Time) ([]*storage.Event, error)
+}
+
+// common fixture for the Create/Update/... functions.
+type TestFixture struct {
+	T           *testing.T
+	t0          *MockLogger
+	mockStorage *MockStorage
+	server      *Server
+	handler     http.Handler
+}
+
+func (fx *TestFixture) LogBuffer() string {
+	return fx.t0.buf.String()
+}
+
+// NewTestFixture создаёт базовый набор для тестов HTTP.
+func NewTestFixture(t *testing.T, mockStorage *MockStorage) *TestFixture {
+	t.Helper() // помечает функцию как вспомогательную для тестов.
+
+	t0 := NewMockLogger()
+	mockApp := &app.App{
+		Logger: t0.logger,
+	}
+
+	server := NewServer(Config{
+		Host: "localhost",
+		Port: "8080",
+	}, mockApp, mockStorage)
+
+	server.RegisterHandlers()
+	handler := server.GetHandler() // нужно добавить этот метод
+
+	return &TestFixture{
+		T:           t,
+		t0:          t0,
+		mockStorage: mockStorage,
+		server:      server,
+		handler:     handler,
+	}
+}
+
+func (m *MockStorage) CreateEvent(ctx context.Context, event *storage.Event) error {
+	if m.CreateEventFunc != nil {
+		return m.CreateEventFunc(ctx, event)
+	}
+	return nil
+}
+
+func (m *MockStorage) UpdateEvent(ctx context.Context, event *storage.Event) error {
+	if m.UpdateEventFunc != nil {
+		return m.UpdateEventFunc(ctx, event)
+	}
+	return nil
+}
+
+func (m *MockStorage) GetEvent(ctx context.Context, id string) (*storage.Event, error) {
+	if m.GetEventFunc != nil {
+		return m.GetEventFunc(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *MockStorage) DeleteEvent(ctx context.Context, id string) error {
+	if m.DeleteEventFunc != nil {
+		return m.DeleteEventFunc(ctx, id)
+	}
+	return nil
+}
+
+func (m *MockStorage) ListEvents(ctx context.Context, userID string) ([]*storage.Event, error) {
+	if m.ListEventsFunc != nil {
+		return m.ListEventsFunc(ctx, userID)
+	}
+	return nil, nil
+}
+
+func (m *MockStorage) ListEventsInInterval(ctx context.Context, from, to time.Time) ([]*storage.Event, error) {
+	if m.ListEventsInIntervalFunc != nil {
+		return m.ListEventsInIntervalFunc(ctx, from, to)
+	}
+	return nil, nil
+}
+
+// CreateEvent ...
+func TestCreateEvent_Success(t *testing.T) {
+	mockStorage := &MockStorage{
+		CreateEventFunc: func(_ context.Context, event *storage.Event) error {
+			event.ID = "generated-id-456" // имитируем генерацию ID.
+			return nil
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	reqBody := CreateEventRequest{
+		Title:       "Test Event",
+		Description: "Test Description",
+		StartTime:   time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC),
+		EndTime:     time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC),
+		UserID:      "user-123",
+	}
+
+	bodyBytes, _ := json.Marshal(reqBody)
+	req, err := http.NewRequestWithContext(context.Background(), "POST",
+		"/events", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusCreated, rr.Code)
+
+	var resp EventResponse
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+
+	assert.Equal(t, "generated-id-456", resp.ID)
+	assert.Equal(t, "Test Event", resp.Title)
+	assert.Equal(t, "Test Description", resp.Description)
+	assert.Equal(t, time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC), resp.StartTime)
+	assert.Equal(t, time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC), resp.EndTime)
+	assert.Equal(t, "user-123", resp.UserID)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Create/Request: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Create/Response: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] Request completed method: POST path: /events ip:  latency:`))
+
+	/*
+		logContent := fx.LogBuffer()
+		_ = os.WriteFile("test_logs.txt", []byte(logContent), 0644)
+	*/
+}
+
+func TestCreateEvent_JsonUnmarshallingError(t *testing.T) {
+	fx := NewTestFixture(t, &MockStorage{})
+
+	// Подготовка запроса
+	reqBody := CreateEventRequest{
+		Title:       "Test Event",
+		Description: "Test Description",
+		UserID:      "user-123",
+	}
+
+	bodyBytes, _ := json.Marshal(reqBody)
+	bodyBytes[0] = '[' // spoiling Json string replace first { at [
+	req, err := http.NewRequestWithContext(context.Background(), "POST",
+		"/events", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Create Error: invalid json`))
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] Request completed method: POST path: /events ip:  latency:`))
+}
+
+func TestCreateEvent_EventCreatingFailure(t *testing.T) {
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		CreateEventFunc: func(_ context.Context, _ *storage.Event) error {
+			return expectedErr
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	reqBody := CreateEventRequest{
+		Title:       "Test Event",
+		Description: "Test Description",
+		StartTime:   time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC),
+		EndTime:     time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC),
+		UserID:      "user-123",
+	}
+
+	bodyBytes, _ := json.Marshal(reqBody)
+	req, err := http.NewRequestWithContext(context.Background(), "POST",
+		"/events", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Create/Request: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] HTTP Create Error: event creating failed database connection failed`))
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] Request completed method: POST path: /events ip:  latency:`))
+}
+
+func Test_EventIDFromURL(t *testing.T) {
+	testCases := []struct {
+		name string
+		url  string
+		id   string
+		errS bool
+	}{
+		{
+			name: "правильный URL",
+			url:  "/events/123",
+			id:   "123",
+			errS: false,
+		},
+		{
+			name: "пустой ID",
+			url:  "/events/",
+			id:   "",
+			errS: true,
+		},
+		{
+			name: "нет ID",
+			url:  "/events",
+			id:   "",
+			errS: true,
+		},
+		{
+			name: "лишний сегмент",
+			url:  "/events/123/extra",
+			id:   "",
+			errS: true,
+		},
+		{
+			name: "короткий URL",
+			url:  "/",
+			id:   "",
+			errS: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var s *Server
+			id, err := s.EventIDFromURL(tc.url)
+
+			assert.Equal(t, tc.id, id)
+			if tc.errS {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+}
+
+// UpdateEvent ...
+func TestUpdateEvent_Success(t *testing.T) {
+	mockStorage := &MockStorage{
+		UpdateEventFunc: func(_ context.Context, event *storage.Event) error {
+			event.Description += " :updated"
+			return nil
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	ID := "generated-id-717"
+	reqBody := UpdateEventRequest{
+		Title:       "Test Event",
+		Description: "Test Description",
+		StartTime:   time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC),
+		EndTime:     time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC),
+		UserID:      "user-123",
+	}
+
+	bodyBytes, _ := json.Marshal(reqBody)
+	req, err := http.NewRequestWithContext(context.Background(), "PUT",
+		fmt.Sprintf("/events/%s", ID), bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var resp EventResponse
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+
+	assert.Equal(t, "generated-id-717", resp.ID)
+	assert.Equal(t, "Test Event", resp.Title)
+	assert.Equal(t, "Test Description :updated", resp.Description)
+	assert.Equal(t, time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC), resp.StartTime)
+	assert.Equal(t, time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC), resp.EndTime)
+	assert.Equal(t, "user-123", resp.UserID)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Update/Request: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Update/Response: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: PUT path: /events/generated-id-717 ip:  latency:`))
+}
+
+func TestUpdateEvent_JsonUnmarshallingError(t *testing.T) {
+	fx := NewTestFixture(t, &MockStorage{})
+
+	// Подготовка запроса
+	ID := "generated-id-987"
+	reqBody := UpdateEventRequest{
+		Title:       "Test Event",
+		Description: "Test Description",
+		UserID:      "user-123",
+	}
+
+	bodyBytes, _ := json.Marshal(reqBody)
+	bodyBytes[0] = '[' // spoiling Json string replace first { at [
+	req, err := http.NewRequestWithContext(context.Background(), "PUT",
+		fmt.Sprintf("/events/%s", ID), bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Update Error: invalid json`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: PUT path: /events/generated-id-987 ip:  latency:`))
+}
+
+func TestUpdateEvent_EventUpdatingFailure(t *testing.T) {
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		UpdateEventFunc: func(_ context.Context, _ *storage.Event) error {
+			return expectedErr
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	ID := "generated-id-ABC"
+	reqBody := UpdateEventRequest{
+		Title:       "Test Event",
+		Description: "Test Description",
+		StartTime:   time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC),
+		EndTime:     time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC),
+		UserID:      "user-123",
+	}
+
+	bodyBytes, _ := json.Marshal(reqBody)
+	req, err := http.NewRequestWithContext(context.Background(), "PUT",
+		fmt.Sprintf("/events/%s", ID), bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Update/Request: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] HTTP Update Error: event updating failed database connection failed`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: PUT path: /events/generated-id-ABC ip:  latency:`))
+}
+
+// GetEvent .....
+func TestGetEvent_Success(t *testing.T) {
+	mockStorage := &MockStorage{
+		GetEventFunc: func(_ context.Context, _ string) (*storage.Event, error) {
+			return &storage.Event{
+				ID:          "generated-id-XXX",
+				Title:       "Test Event",
+				Description: "Test Description",
+				StartTime:   time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC),
+				EndTime:     time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC),
+				UserID:      "user-123",
+			}, nil
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	ID := "generated-id-XXX"
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		fmt.Sprintf("/events/%s", ID), nil)
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var resp EventResponse
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+
+	assert.Equal(t, "generated-id-XXX", resp.ID)
+	assert.Equal(t, "Test Event", resp.Title)
+	assert.Equal(t, "Test Description", resp.Description)
+	assert.Equal(t, time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC), resp.StartTime)
+	assert.Equal(t, time.Date(2026, 2, 25, 16, 30, 0, 0, time.UTC), resp.EndTime)
+	assert.Equal(t, "user-123", resp.UserID)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Get/Request: id=generated-id-XXX`))
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Get/Response: title="Test Event", user_id=user-123`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: GET path: /events/generated-id-XXX ip:  latency:`))
+}
+
+func TestGetEvent_Error(t *testing.T) {
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		GetEventFunc: func(_ context.Context, _ string) (*storage.Event, error) {
+			return nil, expectedErr
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	ID := "generated-id-YYY"
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		fmt.Sprintf("/events/%s", ID), nil)
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, `{"error":"database connection failed"}`+"\n", rr.Body.String())
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Get/Request: id=generated-id-YYY`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] HTTP Get Error: event getting failed database connection failed`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: GET path: /events/generated-id-YYY ip:  latency:`))
+}
+
+// DeleteEvent .....
+func TestDeleteEvent_Success(t *testing.T) {
+	mockStorage := &MockStorage{
+		DeleteEventFunc: func(_ context.Context, _ string) error {
+			return nil
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	ID := "generated-id-ZZZ"
+	req, err := http.NewRequestWithContext(context.Background(), "DELETE",
+		fmt.Sprintf("/events/%s", ID), nil)
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	assert.Equal(t, `{"deleted id":"generated-id-ZZZ"}`+"\n", rr.Body.String())
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Delete/Request: id=generated-id-ZZZ`))
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Delete/Response: id=generated-id-ZZZ`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: DELETE path: /events/generated-id-ZZZ ip:  latency:`))
+}
+
+func TestDeleteEvent_Error(t *testing.T) {
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		DeleteEventFunc: func(_ context.Context, _ string) error {
+			return expectedErr
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	ID := "generated-id-XXX"
+	req, err := http.NewRequestWithContext(context.Background(), "DELETE",
+		fmt.Sprintf("/events/%s", ID), nil)
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, `{"error":"database connection failed"}`+"\n", rr.Body.String())
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP Delete/Request: id=generated-id-XXX`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] HTTP Delete Error: event deleting failed database connection failed`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: DELETE path: /events/generated-id-XXX ip:  latency:`))
+}
+
+// ListEventsEvent .....
+func TestListEvents_Success(t *testing.T) {
+	mockStorage := &MockStorage{
+		ListEventsFunc: func(_ context.Context, UserID string) (events []*storage.Event, _ error) {
+			event0 := &storage.Event{
+				ID:     "id-122",
+				UserID: UserID,
+			}
+			event1 := &storage.Event{
+				ID:     "id-777",
+				UserID: UserID,
+			}
+			events = append(events, event0)
+			events = append(events, event1)
+			return events, nil
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	ID := "user-XXX"
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		fmt.Sprintf("/events?user_id=%s", ID), nil)
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var resp ListEventsResponse
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+
+	assert.Equal(t, 2, len(resp.Events))
+	assert.Equal(t, "id-122", resp.Events[0].ID)
+	assert.Equal(t, "id-777", resp.Events[1].ID)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP ListEvents/Request: id=user-XXX`))
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP ListEvents/Response: user_id=user-XXX`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: GET path: /events ip:  latency:`))
+}
+
+func TestListEvents_Error(t *testing.T) {
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		ListEventsFunc: func(_ context.Context, _ string) (events []*storage.Event, _ error) {
+			return nil, expectedErr
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	ID := "user-XXX"
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		fmt.Sprintf("/events?user_id=%s", ID), nil)
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, `{"error":"database connection failed"}`+"\n", rr.Body.String())
+
+	assert.True(t, strings.Contains(fx.LogBuffer(), `[I] HTTP ListEvents/Request: id=user-XXX`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] HTTP ListEvents Error: list events getting failed database connection failed`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: GET path: /events ip:  latency:`))
+}
+
+func TestListEvents_ErrorUserIdIsEmpty(t *testing.T) {
+	expectedErr := fmt.Errorf("database connection failed")
+	mockStorage := &MockStorage{
+		ListEventsFunc: func(_ context.Context, _ string) (events []*storage.Event, _ error) {
+			return nil, expectedErr
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// Подготовка запроса
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		"/events?user_id=", nil)
+
+	require.NoError(t, err)
+
+	// Выполняем
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	// Проверки
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Equal(t, "error parsing input parameters missing input parameters\n", rr.Body.String())
+
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: GET path: /events ip:  latency:`))
+}
+
+func TestParseListEventsParams(t *testing.T) {
+	t.Run("success with user_id only", func(t *testing.T) {
+		// Создаём запрос с user_id
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "user_id=user123",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "user123", params.UserID)
+		assert.False(t, params.HasFromTo)
+		assert.True(t, params.From.IsZero())
+		assert.True(t, params.To.IsZero())
+	})
+
+	t.Run("success with from/to only", func(t *testing.T) {
+		// Создаём запрос с интервалом
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "from=2026-03-01T00:00:00Z&to=2026-03-02T00:00:00Z",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.NoError(t, err)
+		assert.Empty(t, params.UserID)
+		assert.True(t, params.HasFromTo)
+
+		expectedFrom := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+		expectedTo := time.Date(2026, 3, 2, 0, 0, 0, 0, time.UTC)
+
+		assert.Equal(t, expectedFrom, params.From)
+		assert.Equal(t, expectedTo, params.To)
+	})
+
+	t.Run("error: missing from when to present", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "to=2026-03-02T00:00:00Z",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing 'from'")
+		assert.False(t, params.HasFromTo)
+	})
+
+	t.Run("error: missing to when from present", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "from=2026-03-01T00:00:00Z",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing 'to'")
+		assert.False(t, params.HasFromTo)
+	})
+
+	t.Run("error: invalid from format", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "from=invalid&to=2026-03-02T00:00:00Z",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid 'from' format")
+		assert.False(t, params.HasFromTo)
+	})
+
+	t.Run("error: invalid to format", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "from=2026-03-01T00:00:00Z&to=invalid",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid 'to' format")
+		assert.False(t, params.HasFromTo)
+	})
+
+	t.Run("error: from after to", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "from=2026-03-02T00:00:00Z&to=2026-03-01T00:00:00Z",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "'from' must be before or equal to 'to'")
+		assert.False(t, params.HasFromTo)
+	})
+
+	t.Run("no parameters returns default empty params", func(t *testing.T) {
+		req := &http.Request{
+			URL: &url.URL{
+				RawQuery: "",
+			},
+		}
+
+		params, err := ParseListEventsParameters(req)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing input parameters")
+		assert.False(t, params.HasFromTo)
+	})
+}
+
+// ListEventsInInterval .....
+func TestListEventsInInterval_Success(t *testing.T) {
+	mockStorage := &MockStorage{
+		ListEventsInIntervalFunc: func(_ context.Context, _, _ time.Time) (events []*storage.Event, _ error) {
+			event0 := &storage.Event{
+				ID:     "id-122",
+				UserID: "UserID1",
+			}
+			event1 := &storage.Event{
+				ID:     "id-777",
+				UserID: "UserID2",
+			}
+			events = append(events, event0)
+			events = append(events, event1)
+			return events, nil
+		},
+	}
+	fx := NewTestFixture(t, mockStorage)
+
+	// make start and end.
+	from := time.Date(2026, 2, 25, 15, 30, 0, 0, time.UTC)
+	to := from.Add(2 * time.Hour)
+
+	params := url.Values{}
+	params.Add("from", from.Format(time.RFC3339))
+	params.Add("to", to.Format(time.RFC3339))
+
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		fmt.Sprintf("/events?%s", params.Encode()), nil)
+
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	fx.handler.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var resp ListEventsResponse
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+
+	assert.Equal(t, 2, len(resp.Events))
+	assert.Equal(t, "id-122", resp.Events[0].ID)
+	assert.Equal(t, "id-777", resp.Events[1].ID)
+
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] HTTP ListEventsInInterval/Request: from=2026-02-25 15:30:00 +0000 UTC to=2026-02-25 17:30:00 +0000 UTC`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] HTTP ListEventsInInterval/Response: from=2026-02-25 15:30:00 +0000 UTC to=2026-02-25 17:30:00 +0000 UTC`))
+	assert.True(t, strings.Contains(fx.LogBuffer(),
+		`[I] Request completed method: GET path: /events ip:  latency:`))
+}
