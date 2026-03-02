@@ -25,6 +25,8 @@ go-telnet
 ehthumbs.db
 Thumbs.db
 .vscode/
+.vs
 *.bak
+hw10_program_optimization/users.dat
 
 gitView.202*.bat
